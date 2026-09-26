@@ -15,6 +15,7 @@ import math
 
 from engine.materials.loader import MaterialsLibrary
 from engine.solver.rc_network import ConstructionAssembly, Layer
+from engine.solver.night_gate import NightGateSchedule
 from engine.solver.thermal_solver import GeometrySpec, SurfaceSpec
 
 
@@ -27,6 +28,7 @@ def build_retrofit_geometry(
     floor_area_m2: float,
     ceiling_height_m: float,
     leakage_area_cm2: float,
+    night_gate: NightGateSchedule | None = None,
 ) -> GeometrySpec:
     wall_mat = materials_lib.get(wall_material_id)
     side = math.sqrt(floor_area_m2)
@@ -56,4 +58,5 @@ def build_retrofit_geometry(
         floor_area_m2=floor_area_m2,
         ceiling_height_m=ceiling_height_m,
         leakage_area_cm2=leakage_area_cm2,
+        night_gate=night_gate,
     )

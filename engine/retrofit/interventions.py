@@ -12,16 +12,18 @@ Intervention types implemented:
     more of the SAME material (simplest, most common real retrofit: another
     layer of what's already there).
   - SWAP_WALL_MATERIAL: same wall thickness, different structural material.
+  - ADD_NIGHT_GATE (Phase 5, now implemented — was a stub in Phase 3b):
+    fits the Night Gate physics state (engine/solver/night_gate.py) with a
+    default evening-close/morning-open schedule. No material is added, so
+    there's nothing to cost from materials.json — cost is reported as
+    unknown (None), not guessed.
 
 NOT implemented (listed for transparency, not silently dropped):
-  - NIGHT_GATE: blocked on Phase 5 (Night Gate physics state doesn't exist
-    yet). Included in generate_candidates() output as a
-    `NotYetAvailableIntervention` marker rather than a fabricated number.
-  - TIGHTEN_ENVELOPE (reduce leakage_area_cm2 via air-sealing): physically
-    modelable today (just lower the leakage input), but its cost is
-    labor-only and we have no sourced labor-cost data, same principle as
-    the carbon gap in Phase 3. Left out rather than guessed. Add it once
-    someone has a real number.
+  - TIGHTEN_ENVELOPE (permanently reduce baseline leakage_area_cm2 via
+    air-sealing, as opposed to Night Gate's scheduled/reversible closure):
+    physically modelable today (just lower the leakage input), but its
+    cost is labor-only and we have no sourced labor-cost data, same
+    principle as the carbon gap in Phase 3. Left out rather than guessed.
 """
 from __future__ import annotations
 
@@ -29,21 +31,28 @@ from dataclasses import dataclass
 
 from engine.materials.loader import MaterialsLibrary
 from engine.retrofit.baseline import RetrofitBaseline
+from engine.solver.night_gate import NightGateSchedule
 
 ADDED_INSULATION_THICKNESS_M = 0.05  # one practical retrofit-panel thickness
 
 
 @dataclass
 class Intervention:
-    kind: str  # "add_insulation" | "increase_insulation" | "swap_wall_material"
+    kind: str  # "add_insulation" | "increase_insulation" | "swap_insulation_material" | "swap_wall_material" | "add_night_gate"
     label: str
     # resulting design params, ready to hand to build_retrofit_geometry
     wall_material_id: str
     wall_thickness_m: float
     insulation_material_id: str | None
     insulation_thickness_m: float
-    added_material_id: str
-    added_volume_m3: float  # for cost delta
+    # material-based cost inputs. None/0.0 for interventions with no
+    # material (add_night_gate) -> ranker reports cost as unknown (None)
+    # rather than guessing.
+    added_material_id: str | None = None
+    added_volume_m3: float = 0.0
+    # only set for kind == "add_night_gate"; ranker passes this through to
+    # build_retrofit_geometry's night_gate= argument
+    night_gate: NightGateSchedule | None = None
 
 
 @dataclass
@@ -133,14 +142,26 @@ def generate_candidates(
             )
         )
 
-    unavailable = [
-        NotYetAvailableIntervention(
-            kind="night_gate",
-            label="Add Night Gate (movable insulating night shutter)",
-            reason=(
-                "Blocked on Phase 5 (Night Gate physics state doesn't exist "
-                "in the solver yet). Will be added here once that lands."
+    unavailable: list[NotYetAvailableIntervention] = []
+
+    candidates.append(
+        Intervention(
+            kind="add_night_gate",
+            label="Fit a Night Gate (insulated night shutter over the entry)",
+            wall_material_id=baseline.wall_material_id,
+            wall_thickness_m=baseline.wall_thickness_m,
+            insulation_material_id=baseline.insulation_material_id,
+            insulation_thickness_m=baseline.insulation_thickness_m,
+            night_gate=NightGateSchedule(
+                close_hour=19.0,
+                open_hour=7.0,
+                # closed leakage area capped at whatever's smaller than the
+                # baseline anyway (see night_gate.effective_leakage_area_cm2),
+                # this default just needs to be meaningfully tighter than a
+                # typical baseline (~150-400 cm2)
+                leakage_area_closed_cm2=min(60.0, baseline.leakage_area_cm2 * 0.5),
             ),
         )
-    ]
+    )
+
     return candidates, unavailable

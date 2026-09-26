@@ -27,6 +27,7 @@ from engine.solver.thermal_solver import (
     make_simple_box_geometry,
     simulate,
 )
+from engine.solver.night_gate import NightGateSchedule
 
 router = APIRouter()
 _materials_lib = MaterialsLibrary()
@@ -53,6 +54,13 @@ class SimulateRequest(BaseModel):
     sensible_heat_w: float = 200.0
     co_generation_rate_lpm: float = 0.0
     indoor_temp_initial_c: float = -5.0
+    # Phase 5: optional Night Gate toggle for new-build designs. Off by
+    # default (matches every prior Phase 1/2/3 request shape exactly, so
+    # existing callers are unaffected). See engine/solver/night_gate.py.
+    night_gate_enabled: bool = False
+    night_gate_close_hour: float = 19.0
+    night_gate_open_hour: float = 7.0
+    night_gate_closed_leakage_area_cm2: float = 60.0
 
 
 class SimulateResponse(BaseModel):
@@ -68,6 +76,7 @@ class SimulateResponse(BaseModel):
     safety_passed: bool
     safety_reasons: list[str]
     co_steady_state_ppm: float
+    night_gate_hours_closed: float
 
 
 def _load_climate_for_site(site_id: str) -> ClimateSeries:
@@ -118,8 +127,17 @@ def run_simulation(req: SimulateRequest) -> SimulateResponse:
             floor_area_m2=req.floor_area_m2,
             ceiling_height_m=req.ceiling_height_m,
             leakage_area_cm2=req.leakage_area_cm2,
+            night_gate=(
+                NightGateSchedule(
+                    close_hour=req.night_gate_close_hour,
+                    open_hour=req.night_gate_open_hour,
+                    leakage_area_closed_cm2=req.night_gate_closed_leakage_area_cm2,
+                )
+                if req.night_gate_enabled
+                else None
+            ),
         )
-    except KeyError as e:
+    except (KeyError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     gains = InternalGains(
@@ -152,4 +170,5 @@ def run_simulation(req: SimulateRequest) -> SimulateResponse:
         safety_passed=result.safety.passed,
         safety_reasons=result.safety.reasons,
         co_steady_state_ppm=result.safety.co_steady_state_ppm,
+        night_gate_hours_closed=result.night_gate_hours_closed,
     )

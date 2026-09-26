@@ -54,7 +54,9 @@ class RejectedIntervention:
     reason: str  # e.g. failed safety interlock after applying
 
 
-def _material_cost(materials_lib: MaterialsLibrary, material_id: str, volume_m3: float) -> float | None:
+def _material_cost(materials_lib: MaterialsLibrary, material_id: str | None, volume_m3: float) -> float | None:
+    if material_id is None:
+        return None
     mat = materials_lib.get(material_id)
     if mat.cost_per_m3_inr is None:
         return None
@@ -68,6 +70,7 @@ def _run(
     outdoor_temp_c, ghi_wm2, wind_ms, lw_down_wm2,
     wall_material_id, wall_thickness_m, insulation_material_id, insulation_thickness_m,
     leakage_area_cm2,
+    night_gate=None,
 ):
     geometry = build_retrofit_geometry(
         materials_lib,
@@ -78,6 +81,7 @@ def _run(
         floor_area_m2=baseline.floor_area_m2,
         ceiling_height_m=baseline.ceiling_height_m,
         leakage_area_cm2=leakage_area_cm2,
+        night_gate=night_gate,
     )
     gains = InternalGains(
         sensible_heat_w=baseline.sensible_heat_w,
@@ -135,6 +139,7 @@ def rank_retrofit_interventions(
             insulation_material_id=cand.insulation_material_id,
             insulation_thickness_m=cand.insulation_thickness_m,
             leakage_area_cm2=baseline.leakage_area_cm2,
+            night_gate=cand.night_gate,
         )
         if not result.safety.passed:
             rejected.append(
