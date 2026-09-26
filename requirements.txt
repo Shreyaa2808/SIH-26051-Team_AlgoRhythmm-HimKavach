@@ -4,3 +4,4 @@ pydantic
 requests
 numpy
 scipy
+scikit-learn
