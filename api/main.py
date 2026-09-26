@@ -52,3 +52,6 @@ app.include_router(simulate_router)
 
 from api.routes.optimize import router as optimize_router
 app.include_router(optimize_router)
+
+from api.routes.retrofit import router as retrofit_router
+app.include_router(retrofit_router)
