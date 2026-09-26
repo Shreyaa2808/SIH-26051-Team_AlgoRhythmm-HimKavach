@@ -1,4 +1,4 @@
-# High-Altitude Shelter Thermal Sim
+# High-Altitude Shelter Thermal Sim - HIMKAVACH
 
 ## Phase 0 status: DONE
 - Repo structure: engine/, api/, web/, data/
