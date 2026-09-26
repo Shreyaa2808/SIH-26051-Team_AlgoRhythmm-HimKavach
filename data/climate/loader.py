@@ -5,7 +5,7 @@ it into plain hourly arrays the physics solver can consume directly.
 Usage:
     from data.climate.loader import ClimateSeries
     cs = ClimateSeries.from_power_json("data/climate/leh_2025.json")
-    cs.temp_c[0]       # T2M at hour 0
+    cs.temp_c[0]  ls data/climate/     # T2M at hour 0
     cs.ghi_wm2[0]      # ALLSKY_SFC_SW_DWN at hour 0
 """
 from __future__ import annotations

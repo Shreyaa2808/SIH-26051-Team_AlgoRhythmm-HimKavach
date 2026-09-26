@@ -1,0 +1,170 @@
+"""
+Phase 3b — retrofit intervention ranker.
+
+Reuses engine.solver.thermal_solver.simulate() directly (the Phase 1
+solver), NOT engine.optimizer's NSGA-II/surrogate — there is nothing to
+search here, only a fixed small set of candidate interventions (see
+interventions.py) to evaluate and rank against one fixed baseline.
+
+Ranking metric: cost per degree C gained at the coldest hour
+(cost_inr / delta_comfort_c), ascending — cheapest comfort-per-degree
+first. An intervention that fails the safety interlock after being applied
+is EXCLUDED from the ranking (not shown with a warning badge, per the same
+hard-gate rule as everywhere else in this codebase) but reported separately
+so the person can see it was considered and why it was dropped — e.g. an
+intervention that happens to worsen infiltration below the health floor.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from engine.materials.loader import MaterialsLibrary
+from engine.retrofit.baseline import RetrofitBaseline
+from engine.retrofit.geometry import build_retrofit_geometry
+from engine.retrofit.interventions import (
+    Intervention,
+    NotYetAvailableIntervention,
+    generate_candidates,
+)
+from engine.solver.thermal_solver import InternalGains, SiteSpec, simulate
+
+
+@dataclass
+class BaselineResult:
+    comfort_coldest_hour_c: float
+    wall_u_value_wm2k: float
+    safety_passed: bool
+    safety_reasons: list[str]
+
+
+@dataclass
+class RankedIntervention:
+    intervention: Intervention
+    comfort_coldest_hour_c: float
+    delta_comfort_c: float  # positive = improvement over baseline
+    added_cost_inr: float
+    cost_per_degree_inr: float | None  # None if delta_comfort_c <= 0 (no benefit to divide by)
+    wall_u_value_wm2k: float
+    safety_passed: bool
+
+
+@dataclass
+class RejectedIntervention:
+    intervention: Intervention
+    reason: str  # e.g. failed safety interlock after applying
+
+
+def _material_cost(materials_lib: MaterialsLibrary, material_id: str, volume_m3: float) -> float | None:
+    mat = materials_lib.get(material_id)
+    if mat.cost_per_m3_inr is None:
+        return None
+    return volume_m3 * mat.cost_per_m3_inr
+
+
+def _run(
+    materials_lib: MaterialsLibrary,
+    site: SiteSpec,
+    baseline: RetrofitBaseline,
+    outdoor_temp_c, ghi_wm2, wind_ms, lw_down_wm2,
+    wall_material_id, wall_thickness_m, insulation_material_id, insulation_thickness_m,
+    leakage_area_cm2,
+):
+    geometry = build_retrofit_geometry(
+        materials_lib,
+        wall_material_id=wall_material_id,
+        wall_thickness_m=wall_thickness_m,
+        insulation_material_id=insulation_material_id,
+        insulation_thickness_m=insulation_thickness_m,
+        floor_area_m2=baseline.floor_area_m2,
+        ceiling_height_m=baseline.ceiling_height_m,
+        leakage_area_cm2=leakage_area_cm2,
+    )
+    gains = InternalGains(
+        sensible_heat_w=baseline.sensible_heat_w,
+        co_generation_rate_lpm=baseline.co_generation_rate_lpm,
+    )
+    result = simulate(
+        geometry=geometry,
+        site=site,
+        outdoor_temp_c=outdoor_temp_c,
+        ghi_wm2=ghi_wm2,
+        wind_ms=wind_ms,
+        lw_down_wm2=lw_down_wm2,
+        day_of_year=baseline.day_of_year,
+        internal_gains=gains,
+        indoor_temp_initial_c=baseline.indoor_temp_initial_c,
+    )
+    return result, geometry
+
+
+def rank_retrofit_interventions(
+    materials_lib: MaterialsLibrary,
+    site: SiteSpec,
+    baseline: RetrofitBaseline,
+    outdoor_temp_c: list[float],
+    ghi_wm2: list[float],
+    wind_ms: list[float],
+    lw_down_wm2: list[float] | None,
+) -> tuple[BaselineResult, list[RankedIntervention], list[RejectedIntervention], list[NotYetAvailableIntervention]]:
+    # --- baseline, exactly as it exists today ---
+    base_result, base_geometry = _run(
+        materials_lib, site, baseline, outdoor_temp_c, ghi_wm2, wind_ms, lw_down_wm2,
+        wall_material_id=baseline.wall_material_id,
+        wall_thickness_m=baseline.wall_thickness_m,
+        insulation_material_id=baseline.insulation_material_id,
+        insulation_thickness_m=baseline.insulation_thickness_m,
+        leakage_area_cm2=baseline.leakage_area_cm2,
+    )
+    baseline_out = BaselineResult(
+        comfort_coldest_hour_c=base_result.min_indoor_temp_c,
+        wall_u_value_wm2k=base_geometry.surfaces[0].assembly.u_value(),
+        safety_passed=base_result.safety.passed,
+        safety_reasons=base_result.safety.reasons,
+    )
+
+    candidates, unavailable = generate_candidates(baseline, materials_lib)
+
+    ranked: list[RankedIntervention] = []
+    rejected: list[RejectedIntervention] = []
+
+    for cand in candidates:
+        result, geometry = _run(
+            materials_lib, site, baseline, outdoor_temp_c, ghi_wm2, wind_ms, lw_down_wm2,
+            wall_material_id=cand.wall_material_id,
+            wall_thickness_m=cand.wall_thickness_m,
+            insulation_material_id=cand.insulation_material_id,
+            insulation_thickness_m=cand.insulation_thickness_m,
+            leakage_area_cm2=baseline.leakage_area_cm2,
+        )
+        if not result.safety.passed:
+            rejected.append(
+                RejectedIntervention(
+                    intervention=cand,
+                    reason=f"Fails safety interlock after applying: {'; '.join(result.safety.reasons)}",
+                )
+            )
+            continue
+
+        cost = _material_cost(materials_lib, cand.added_material_id, cand.added_volume_m3)
+        delta = result.min_indoor_temp_c - baseline_out.comfort_coldest_hour_c
+        cost_per_degree = None
+        if cost is not None and delta > 0:
+            cost_per_degree = cost / delta
+
+        ranked.append(
+            RankedIntervention(
+                intervention=cand,
+                comfort_coldest_hour_c=result.min_indoor_temp_c,
+                delta_comfort_c=delta,
+                added_cost_inr=cost if cost is not None else float("nan"),
+                cost_per_degree_inr=cost_per_degree,
+                wall_u_value_wm2k=geometry.surfaces[0].assembly.u_value(),
+                safety_passed=True,
+            )
+        )
+
+    # cheapest cost-per-degree first; interventions with no positive delta
+    # (or unknown cost) sort to the end rather than crashing on None
+    ranked.sort(key=lambda r: (r.cost_per_degree_inr is None, r.cost_per_degree_inr or float("inf")))
+
+    return baseline_out, ranked, rejected, unavailable

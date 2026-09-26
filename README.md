@@ -1,4 +1,4 @@
-# High-Altitude Shelter Thermal Sim HIMKAVACH
+# High-Altitude Shelter Thermal Sim
 
 ## Phase 0 status: DONE
 - Repo structure: engine/, api/, web/, data/
@@ -149,11 +149,54 @@ directly, not through /simulate), so it wasn't blocked, but Phase 3b
 (retrofit intervention-ranker, next) will want the required-fields
 contract decided first. Worth doing before starting 3b rather than after.
 
-## Next (Phase 3b — retrofit intervention-ranker)
-Small task: given a FIXED baseline (existing structure's materials +
-geometry, required fields, no optimizer filling gaps) from Phase 1's
-solver, rank single-variable upgrades (add insulation layer, swap a
-material, add Night Gate) by cost/impact delta. Reuses
-engine/solver/thermal_solver.simulate() directly — explicitly NOT reusing
-engine/optimizer's NSGA-II/surrogate, since there's nothing to search, only
-a fixed small set of interventions to evaluate and rank.
+## Phase 3b status: DONE — retrofit intervention-ranker
+- engine/retrofit/baseline.py — RetrofitBaseline: every field describing
+  the existing structure is required (raises ValueError if missing), no
+  optimizer/defaults filling gaps. `insulation_thickness_m == 0` +
+  `insulation_material_id = None` is the explicit, valid way to say "no
+  existing insulation" — that's baseline data, not a missing field.
+- engine/retrofit/geometry.py — geometry builder that (unlike Phase 1/3's
+  make_simple_box_geometry) omits the insulation layer entirely when
+  thickness is 0, instead of passing a degenerate zero-thickness layer —
+  a zero-thickness layer produces a zero-resistance edge, which is a
+  division-by-zero in the solver's conductance assembly. Found this by
+  trying it.
+- engine/retrofit/interventions.py — generates the single-variable upgrade
+  candidates: add insulation (baseline has none), increase/replace
+  insulation (baseline has some), swap wall material. Night Gate is listed
+  as a `NotYetAvailableIntervention` (blocked on Phase 5, not faked).
+  Air-sealing/tightening is left out entirely — no sourced labor-cost data,
+  same "don't fabricate a number" call as Phase 3's carbon objective.
+- engine/retrofit/ranker.py — reuses engine/solver/thermal_solver.simulate()
+  DIRECTLY, not engine/optimizer's NSGA-II/surrogate (nothing to search,
+  just a small fixed candidate set to evaluate). Ranks by cost per degree C
+  gained at the coldest hour. Any candidate that fails the safety interlock
+  after being applied is excluded from the ranking and reported separately
+  (with why) rather than shown with a warning badge — same hard-gate rule
+  as everywhere else here.
+- api/routes/retrofit.py — POST /retrofit/rank, wired into api/main.py.
+  Separate endpoint from /optimize (not a mode toggle on it), since
+  retrofit doesn't search a space, it ranks against one fixed structure.
+
+Smoke-tested against synthetic winter data, both branches (no existing
+insulation, and some existing insulation), plus the required-field
+rejection path. Example result on a no-insulation stone baseline: rebuilding
+in sun-dried mud brick beats adding an insulation layer on cost-per-degree
+(₹8.7k/°C vs ₹21k/°C for mineral wool) — worth sanity-checking that against
+real build practice before trusting it, since it's driven entirely by the
+materials.json cost/k numbers, not a construction-labor estimate.
+
+## Outstanding item, now actually relevant: the mode field / api-contract.md
+Still not done (see the note added after Phase 3). Wasn't a blocker for 3b
+either, since /retrofit/rank is its own endpoint with its own
+all-required-fields request schema — it doesn't route through /simulate's
+`mode` flag at all. But Person B's retrofit config-form validation (Phase
+1.5/5 on their side) will want to know this schema, so pointing them at
+api/routes/retrofit.py's RetrofitRankRequest (or writing it up in
+docs/api-contract.md, which still doesn't exist) is worth doing now.
+
+## Next (Phase 5 — Night Gate physics state)
+Add a Night Gate physics state to the solver (time-varying assembly
+resistance/schedule — closed at night, open in the day), then wire it back
+into engine/retrofit/interventions.py to replace the current
+NotYetAvailableIntervention stub with a real ranked candidate.
