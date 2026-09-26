@@ -159,3 +159,11 @@ button[type="submit"]:disabled, .primary-btn:disabled { opacity: 0.5; cursor: no
   box-shadow: var(--card-shadow);
 }
 .chart-card h3 { margin: 0 0 0.5rem; font-size: 1.05rem; color: var(--text); }
+
+.site-card { cursor: pointer; }
+.site-card:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+.intervention-card.highlight {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}

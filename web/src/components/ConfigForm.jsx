@@ -6,21 +6,22 @@ const SITES = [
   { id: 'dras', label: 'Dras' },
 ];
 
-export default function ConfigForm({ onResult }) {
+export default function ConfigForm({ onResult, defaultSiteId }) {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const [form, setForm] = useState({
-    site_id: 'leh',
-    day_of_year: 15,
-    wall_material_id: 'local_stone_masonry',
-    insulation_material_id: 'expanded_polystyrene_eps',
-    wall_thickness_m: 0.3,
-    insulation_thickness_m: 0.1,
-    floor_area_m2: 16.0,
-    ceiling_height_m: 2.4,
-  });
+const [form, setForm] = useState({
+  site_id: defaultSiteId || 'leh',
+  day_of_year: 15,
+  wall_material_id: 'local_stone_masonry',
+  insulation_material_id: 'expanded_polystyrene_eps',
+  wall_thickness_m: 0.3,
+  insulation_thickness_m: 0.1,
+  floor_area_m2: 16.0,
+  ceiling_height_m: 2.4,
+  night_gate_enabled: false,
+});
 
   useEffect(() => {
     fetch('http://localhost:8000/materials')
@@ -168,6 +169,15 @@ export default function ConfigForm({ onResult }) {
           onChange={(e) => handleChange('ceiling_height_m', Number(e.target.value))}
         />
       </label>
+
+<label className="checkbox-label">
+  <input
+    type="checkbox"
+    checked={form.night_gate_enabled}
+    onChange={(e) => handleChange('night_gate_enabled', e.target.checked)}
+  />
+  Enable Adaptive Night Gate (closes envelope at night, reopens by day)
+</label>
 
       <button type="submit" disabled={loading}>
         {loading ? 'Simulating...' : 'Simulate'}

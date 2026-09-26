@@ -6,14 +6,14 @@ const SITES = [
   { id: 'dras', label: 'Dras' },
 ];
 
-export default function RetrofitForm({ onResult }) {
+export default function RetrofitForm({ onResult, defaultSiteId }) {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasInsulation, setHasInsulation] = useState(false);
 
   const [form, setForm] = useState({
-    site_id: 'leh',
+    site_id: defaultSiteId || 'leh',
     day_of_year: 15,
     floor_area_m2: '',
     ceiling_height_m: '',

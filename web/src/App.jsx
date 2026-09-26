@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import SiteMap from './components/SiteMap';
 import ConfigForm from './components/ConfigForm';
 import RetrofitForm from './components/RetrofitForm';
 import RetrofitResults from './components/RetrofitResults';
@@ -6,6 +7,7 @@ import TemperatureChart from './components/TemperatureChart';
 import OptimizeResults from './components/OptimizeResults';
 
 function App() {
+  const [siteId, setSiteId] = useState(null);
   const [mode, setMode] = useState(null); // null | "new" | "retrofit"
   const [simResult, setSimResult] = useState(null);
   const [retrofitResult, setRetrofitResult] = useState(null);
@@ -34,7 +36,15 @@ function App() {
 
   const handleNewSimResult = (data) => {
     setSimResult(data);
-    setOptimizeResult(null); // clear stale optimize results from a previous config
+    setOptimizeResult(null);
+  };
+
+  const resetAll = () => {
+    setSiteId(null);
+    setMode(null);
+    setSimResult(null);
+    setRetrofitResult(null);
+    setOptimizeResult(null);
   };
 
   return (
@@ -42,18 +52,23 @@ function App() {
       <h1>LADAKH-ADAPT — Shelter Thermal Simulator</h1>
       <p className="tagline">Physics-validated shelter design for extreme high-altitude climates</p>
 
-      {mode === null && (
-        <div className="mode-select">
-          <h2>What are you designing?</h2>
-          <button onClick={() => setMode('new')}>Design New Shelter</button>
-          <button onClick={() => setMode('retrofit')}>Retrofit Existing Shelter</button>
-        </div>
+      {!siteId && <SiteMap onSelect={setSiteId} />}
+
+      {siteId && mode === null && (
+        <>
+          <button className="back-btn" onClick={() => setSiteId(null)}>← Change site</button>
+          <div className="mode-select">
+            <h2>Designing for {siteId[0].toUpperCase() + siteId.slice(1)} — what next?</h2>
+            <button onClick={() => setMode('new')}>Design New Shelter</button>
+            <button onClick={() => setMode('retrofit')}>Retrofit Existing Shelter</button>
+          </div>
+        </>
       )}
 
-      {mode === 'new' && (
+      {siteId && mode === 'new' && (
         <>
           <button className="back-btn" onClick={() => setMode(null)}>← Back</button>
-          <ConfigForm onResult={handleNewSimResult} />
+          <ConfigForm defaultSiteId={siteId} onResult={handleNewSimResult} />
 
           {simResult && (
             <div className="results">
@@ -67,6 +82,9 @@ function App() {
               <p>Max indoor temp: {simResult.max_indoor_temp_c.toFixed(1)}°C</p>
               <p>Wall U-value: {simResult.wall_u_value_wm2k.toFixed(3)} W/m²K</p>
               <p>Safety passed: {simResult.safety_passed ? '✅ Yes' : '❌ No'}</p>
+{simResult.night_gate_hours_closed > 0 && (
+  <p>🌙 Night Gate closed for {simResult.night_gate_hours_closed.toFixed(0)} hours</p>
+)}
 
               <button className="primary-btn" onClick={runOptimize} disabled={optimizing}>
                 {optimizing ? 'Optimizing (may take a moment)...' : 'Optimize This Design'}
@@ -78,10 +96,10 @@ function App() {
         </>
       )}
 
-      {mode === 'retrofit' && (
+      {siteId && mode === 'retrofit' && (
         <>
           <button className="back-btn" onClick={() => setMode(null)}>← Back</button>
-          <RetrofitForm onResult={setRetrofitResult} />
+          <RetrofitForm defaultSiteId={siteId} onResult={setRetrofitResult} />
           <RetrofitResults data={retrofitResult} />
         </>
       )}
