@@ -36,3 +36,6 @@ def list_materials():
 
 from api.routes.simulate import router as simulate_router
 app.include_router(simulate_router)
+
+from api.routes.optimize import router as optimize_router
+app.include_router(optimize_router)

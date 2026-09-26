@@ -95,7 +95,65 @@ Known limitations (put these on the slide, don't hide them):
   worth a sensitivity run with both value sets before the optimizer (Phase 3)
   leans on them
 
-## Next (Phase 3 — optimizer + ML surrogate)
-Multi-objective optimizer (comfort/cost/carbon/weight) on top of the now-
-validated solver, plus an ML surrogate trained on generated physics data
-with confidence-aware fallback to a live physics run.
+## Phase 3 status: DONE (new-build only — retrofit is Phase 3b, not this)
+- engine/optimizer/search_space.py — free variables: wall material,
+  insulation material, wall thickness, insulation thickness, leakage area
+  (build-quality proxy). floor_area_m2/ceiling_height_m are FIXED inputs,
+  not searched.
+- engine/optimizer/objectives.py — comfort (coldest indoor hour, matches
+  Phase 2's hero-number framing), cost (materials only, INR), weight
+  (envelope mass, kg). **carbon is NOT implemented** — materials.json has
+  no embodied-carbon field/citation for any material; `carbon_kgco2e` is
+  always `None` rather than a fabricated number. Needs real sourced data
+  before it can be a real objective.
+- engine/optimizer/nsga2.py — from-scratch NSGA-II (no new GA dependency)
+  over the mixed discrete/continuous design dict. Uses constrained-
+  domination (Deb's rule) so the safety interlock is never folded into the
+  objective weights — a failing design is never "just worse", it's invalid.
+- engine/optimizer/surrogate.py — RandomForest-per-objective surrogate
+  (needs scikit-learn, added to requirements.txt). Confidence-aware: per-
+  tree std-dev on the comfort prediction decides whether to trust the
+  surrogate or fall back to a real physics run for that candidate.
+- engine/optimizer/optimize.py — orchestrates: physics-seeded surrogate,
+  surrogate-accelerated NSGA-II with periodic retraining, then a HARD
+  physics-verification + real safety re-check on every design in the
+  final Pareto front before it's returned. No design reaches the API
+  response on the surrogate's word alone.
+- api/routes/optimize.py — POST /optimize, new-build only, mirrors
+  /simulate's climate-loading path. Wired into api/main.py.
+
+Smoke-tested end-to-end against synthetic winter data (real NASA POWER
+data still isn't cached in this sandbox — same caveat as Phase 1/2): ranked
+front correctly trades cheap/heavy stone+wool against pricier/lighter
+SIP+XPS, all entries pass the safety interlock.
+
+Known limitations for the slide:
+- Surrogate is retrained fresh per optimization run, not shipped
+  pretrained — see engine/optimizer/surrogate.py docstring for why.
+- NSGA-II hyperparameters (pop size, generations, retrain cadence,
+  comfort_std_threshold_c) are reasonable defaults, not tuned against a
+  validation set.
+- `carbon_kgco2e` is a real gap, not a placeholder waiting on formatting —
+  someone needs to source per-material embodied-carbon numbers with
+  citations before this objective can exist for real.
+
+## Outstanding cross-team item (not a Phase 3 blocker, but flagging it)
+Per the updated phase split, Phase 1's `/simulate` was supposed to gain a
+`mode: "new" | "retrofit"` field (with materials/geometry becoming
+`required: true` for retrofit) and `docs/api-contract.md` was supposed to
+be updated to lock that schema with Person B before further frontend work.
+Neither exists yet in this repo — `api/routes/simulate.py` still has no
+`mode` field, and there's no `docs/api-contract.md` file. Phase 3 (this
+optimizer) didn't need either (it's new-build-only and calls the solver
+directly, not through /simulate), so it wasn't blocked, but Phase 3b
+(retrofit intervention-ranker, next) will want the required-fields
+contract decided first. Worth doing before starting 3b rather than after.
+
+## Next (Phase 3b — retrofit intervention-ranker)
+Small task: given a FIXED baseline (existing structure's materials +
+geometry, required fields, no optimizer filling gaps) from Phase 1's
+solver, rank single-variable upgrades (add insulation layer, swap a
+material, add Night Gate) by cost/impact delta. Reuses
+engine/solver/thermal_solver.simulate() directly — explicitly NOT reusing
+engine/optimizer's NSGA-II/surrogate, since there's nothing to search, only
+a fixed small set of interventions to evaluate and rank.
