@@ -1,0 +1,44 @@
+{
+  "_citation": "Hall, M. & Geissler, A. (FHNW), 'Thermal comfort in Passive Solar Houses in Ladakh (Simulation of HIAL's PSH, wp 2.2)', v6.0, 2022-01-26. Funded by Swiss FDFA/SDC. Project partners: HIAL (Himalayan Institute of Alternatives, Leh), TERI, FHNW.",
+  "_use": "Ground-truth reference for Phase 2 solver validation. Two independent checks: (1) steady-state U-value of their PreFreb wall/roof assembly, reproduced with our ConstructionAssembly and compared to their published U-values; (2) transient sanity check using their Leh TMY monthly-mean temperatures as forcing.",
+
+  "leh_tmy_monthly_mean_temp_c": {
+    "_source": "NREL Leh TMY dataset (34941_34.15_77.55_tmy.csv), as tabulated in the FHNW report Table 8",
+    "jan": -12.7, "feb": -12.2, "mar": -9.5, "apr": -4.4, "may": -1.4, "jun": 2.1,
+    "jul": 6.2, "aug": 6.7, "sep": 3.5, "oct": -1.8, "nov": -7.5, "dec": -12.1
+  },
+
+  "ground_temp_monthly_c": {
+    "_source": "FHNW report Table 8, derived per EN ISO 13370 from Leh TMY data",
+    "jan": -2.3, "feb": -0.5, "mar": 3.1, "apr": 6.2, "may": 9.3, "jun": 12.0,
+    "jul": 13.8, "aug": 13.4, "sep": 10.6, "oct": 6.9, "nov": 1.8, "dec": -1.6
+  },
+
+  "prefreb_wall_construction": {
+    "_source": "FHNW report Table 1 + Table 14",
+    "layers_outside_to_inside": [
+      {"material": "strawclay_block", "thickness_m": 0.25},
+      {"material": "expanded_polystyrene_eps", "thickness_m": 0.10}
+    ],
+    "note": "report lists this as '25cm straw-clay/reinforced concrete + 10cm insulation'; we use plain strawclay_block (no rebar) since the RC contribution is small-area (every third cavity) and not separately quantified",
+    "published_u_value_wm2k": 0.19
+  },
+
+  "prefreb_roof_construction": {
+    "_source": "FHNW report Table 6",
+    "layers_outside_to_inside": [
+      {"material": "strawclay_block", "thickness_m": 0.20}
+    ],
+    "note": "report's actual roof stack (waterproofing/mud plaster/20cm strawclay/plywood/20cm pashmina wool/plywood) is more complex than our materials library can fully reproduce (no pashmina-wool entry); this is a simplified single-dominant-layer check, expect our U-value to differ from theirs more than the wall check does",
+    "published_u_value_wm2k": 0.16
+  },
+
+  "measurement_vs_simulation_benchmark": {
+    "_source": "FHNW report Table 12 (best-tuned model, 07.01-12.02.2021, west room)",
+    "note": "this is THEIR simulation-vs-measurement error, not a target for us to beat -- it's the benchmark for what good agreement looks like in this exact climate/building type. Use it to judge whether our RMSE/MAE (once we have real measured or high-confidence comparison data) is in a reasonable range.",
+    "room_air_temp_rmse_k": 4.5,
+    "room_air_temp_mae_k": 3.7,
+    "measured_mean_room_temp_c": 20,
+    "measured_room_temp_stdev_c": 3
+  }
+}

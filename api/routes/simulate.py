@@ -1,0 +1,155 @@
+"""
+POST /simulate — the Phase 1 deliverable endpoint.
+
+Takes site + simple-box geometry + materials + a day-of-year, runs the
+transient RC solver against that day's climate (loaded from the cached
+NASA POWER JSON for the requested site), and returns the 24-hour indoor
+temperature curve plus the safety-interlock result.
+
+NOTE: uses make_simple_box_geometry for now (rectangular single-room,
+same wall construction on all sides) since that's what Phase 1 needs to
+prove the solver works. Phase 3/4 will accept arbitrary per-surface
+geometry from the optimizer/drawing tools.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
+from data.climate.loader import ClimateSeries
+from engine.materials.loader import MaterialsLibrary
+from engine.solver.thermal_solver import (
+    GeometrySpec,
+    InternalGains,
+    SiteSpec,
+    make_simple_box_geometry,
+    simulate,
+)
+
+router = APIRouter()
+_materials_lib = MaterialsLibrary()
+
+CLIMATE_DIR = Path(__file__).resolve().parents[2] / "data" / "climate"
+
+SITE_COORDS = {
+    "leh": {"lat": 34.1526, "lon": 77.5771, "elevation_m": 3500},
+    "siachen": {"lat": 35.5000, "lon": 77.0000, "elevation_m": 5500},
+    "dras": {"lat": 34.4333, "lon": 75.7667, "elevation_m": 3230},
+}
+
+
+class SimulateRequest(BaseModel):
+    site_id: str = Field(..., description="one of: leh, siachen, dras")
+    day_of_year: int = Field(15, ge=1, le=365, description="1-365, e.g. 15 = mid-January")
+    wall_material_id: str = "local_stone_masonry"
+    insulation_material_id: str = "expanded_polystyrene_eps"
+    wall_thickness_m: float = 0.3
+    insulation_thickness_m: float = 0.1
+    floor_area_m2: float = 16.0
+    ceiling_height_m: float = 2.4
+    leakage_area_cm2: float = 200.0
+    sensible_heat_w: float = 200.0
+    co_generation_rate_lpm: float = 0.0
+    indoor_temp_initial_c: float = -5.0
+
+
+class SimulateResponse(BaseModel):
+    site_id: str
+    day_of_year: int
+    hours: list[float]
+    indoor_temp_c: list[float]
+    outdoor_temp_c: list[float]
+    min_indoor_temp_c: float
+    max_indoor_temp_c: float
+    mean_ach: float
+    wall_u_value_wm2k: float
+    safety_passed: bool
+    safety_reasons: list[str]
+    co_steady_state_ppm: float
+
+
+def _load_climate_for_site(site_id: str) -> ClimateSeries:
+    # look for any cached year file for this site (fetch_nasa_power.py names
+    # them <site_id>_<year>.json)
+    matches = sorted(CLIMATE_DIR.glob(f"{site_id}_*.json"))
+    if not matches:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"No cached climate data for site '{site_id}'. Run "
+                f"data/climate/fetch_nasa_power.py first (needs internet)."
+            ),
+        )
+    return ClimateSeries.from_power_json(matches[0], site_id=site_id)
+
+
+@router.post("/simulate", response_model=SimulateResponse)
+def run_simulation(req: SimulateRequest) -> SimulateResponse:
+    if req.site_id not in SITE_COORDS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown site_id '{req.site_id}'. Valid: {list(SITE_COORDS)}",
+        )
+
+    coords = SITE_COORDS[req.site_id]
+    site = SiteSpec(lat_deg=coords["lat"], lon_deg=coords["lon"], elevation_m=coords["elevation_m"])
+
+    climate = _load_climate_for_site(req.site_id)
+
+    # extract the 24 hours matching the requested day-of-year from the
+    # cached year-long series
+    start_idx = (req.day_of_year - 1) * 24
+    if start_idx + 24 > len(climate.temp_c):
+        raise HTTPException(
+            status_code=400,
+            detail=f"day_of_year {req.day_of_year} out of range for cached climate data.",
+        )
+    day = climate.hour_slice(start_idx, 24)
+
+    try:
+        geometry: GeometrySpec = make_simple_box_geometry(
+            _materials_lib,
+            wall_material_id=req.wall_material_id,
+            insulation_material_id=req.insulation_material_id,
+            wall_thickness_m=req.wall_thickness_m,
+            insulation_thickness_m=req.insulation_thickness_m,
+            floor_area_m2=req.floor_area_m2,
+            ceiling_height_m=req.ceiling_height_m,
+            leakage_area_cm2=req.leakage_area_cm2,
+        )
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    gains = InternalGains(
+        sensible_heat_w=req.sensible_heat_w,
+        co_generation_rate_lpm=req.co_generation_rate_lpm,
+    )
+
+    result = simulate(
+        geometry=geometry,
+        site=site,
+        outdoor_temp_c=day.temp_c,
+        ghi_wm2=day.ghi_wm2,
+        wind_ms=day.wind_ms,
+        lw_down_wm2=day.lw_down_wm2,
+        day_of_year=req.day_of_year,
+        internal_gains=gains,
+        indoor_temp_initial_c=req.indoor_temp_initial_c,
+    )
+
+    return SimulateResponse(
+        site_id=req.site_id,
+        day_of_year=req.day_of_year,
+        hours=result.hours,
+        indoor_temp_c=result.indoor_temp_c,
+        outdoor_temp_c=result.outdoor_temp_c,
+        min_indoor_temp_c=result.min_indoor_temp_c,
+        max_indoor_temp_c=result.max_indoor_temp_c,
+        mean_ach=result.mean_ach,
+        wall_u_value_wm2k=geometry.surfaces[0].assembly.u_value(),
+        safety_passed=result.safety.passed,
+        safety_reasons=result.safety.reasons,
+        co_steady_state_ppm=result.safety.co_steady_state_ppm,
+    )

@@ -7,6 +7,7 @@
     "cost_note": "flag if cost includes remote-site transport premium",
     "citation": "source for k/rho/cp values"
   },
+  "_known_discrepancies": "sun_dried_mud_brick_adobe and rammed_earth here use Rijal/Yoshida and Hall/Allinson values respectively; the HIAL/FHNW Ladakh report (Hall & Geissler 2022, Table 14, citing Zurcher & Frank 2018) gives materially different numbers for the same material classes (adobe k=0.13 rho=2210 cp=1000 vs our 0.75/1600/1000; rammed earth k=0.8 rho=1200 cp=1000 vs our 1.1/2000/1000). Earthen material properties vary widely with local soil composition, moisture content and compaction method, so this is a real uncertainty, not a data-entry error -- flag it in the limitations slide and consider running the optimizer/validation with both value sets to bound sensitivity.",
   "materials": [
     {
       "id": "expanded_polystyrene_eps",
@@ -163,6 +164,17 @@
       "cost_per_m2_inr": 14000,
       "cost_note": "priced per m^2; premium cold-climate glazing, U-value ~0.6-0.8 W/m2K",
       "citation": "Passive House Institute component database; ISO 10077-1"
+    },
+    {
+      "id": "strawclay_block",
+      "name": "Straw-clay block (100x25cm, cylindrical cavities)",
+      "category": "structural/thermal mass",
+      "k": 0.19,
+      "rho": 660,
+      "cp": 1500,
+      "cost_per_m3_inr": null,
+      "cost_note": "no INR cost data available; used in HIAL Ladakh passive solar houses",
+      "citation": "Hall & Geissler (FHNW), 'Thermal comfort in Passive Solar Houses in Ladakh' (2022), Table 14, citing Zurcher & Frank, Building Physics, 5th ed. 2018"
     },
     {
       "id": "reflective_foil_radiant_barrier",
