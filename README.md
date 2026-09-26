@@ -195,8 +195,37 @@ all-required-fields request schema — it doesn't route through /simulate's
 api/routes/retrofit.py's RetrofitRankRequest (or writing it up in
 docs/api-contract.md, which still doesn't exist) is worth doing now.
 
-## Next (Phase 5 — Night Gate physics state)
-Add a Night Gate physics state to the solver (time-varying assembly
-resistance/schedule — closed at night, open in the day), then wire it back
-into engine/retrofit/interventions.py to replace the current
-NotYetAvailableIntervention stub with a real ranked candidate.
+## Phase 5 (Person A half) status: DONE — Night Gate physics state
+- engine/solver/night_gate.py — NightGateSchedule: a closed/open hour
+  window that reduces EFFECTIVE INFILTRATION LEAKAGE AREA while closed,
+  clamped so it can never make leakage worse than baseline. Modeled as an
+  infiltration effect, not conduction — there's no window/opening
+  subsystem in this geometry model to hang an R-value on, and a Night Gate
+  physically closes off the draftiest part of the envelope, not a wall.
+  Cost is not modeled (no product/material data) — reported as None.
+- engine/solver/thermal_solver.py — GeometrySpec gained an optional
+  `night_gate` field (default None, so every existing caller is
+  unaffected); the infiltration ACH calculation now uses
+  `effective_leakage_area_cm2()` each substep instead of the static
+  leakage input; SimResult reports `night_gate_hours_closed`.
+- make_simple_box_geometry() and engine/retrofit/geometry.py's
+  build_retrofit_geometry() both accept an optional `night_gate=` arg now,
+  so it's usable from new-build AND retrofit.
+- api/routes/simulate.py — added `night_gate_enabled` (+ schedule fields)
+  to SimulateRequest, off by default; this is the physics-side half of
+  Person B's Phase 5 UI toggle.
+- engine/retrofit/interventions.py / ranker.py — replaced the Phase 3b
+  `NotYetAvailableIntervention` stub with a real `add_night_gate`
+  candidate, evaluated and ranked exactly like the material-based ones
+  (cost reported as unknown/None, comfort delta is real).
+
+Smoke-tested: fitting a Night Gate on a synthetic-winter no-insulation
+stone baseline raised the coldest indoor hour by ~4.5°C (safety interlock
+still passes) — sanity check that a scheduled infiltration cut has a
+meaningfully large effect at these leakage/ACH magnitudes, worth a second
+look once real climate data is in the loop.
+
+## Still outstanding: mode field / docs/api-contract.md
+Unchanged from before — flagging again since it's been three phases now.
+Worth doing before Person B's Phase 5 retrofit-config-form work if it
+hasn't happened on their side already.

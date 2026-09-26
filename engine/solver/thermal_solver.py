@@ -35,6 +35,7 @@ from engine.solver.rc_network import ConstructionAssembly, Layer
 from engine.solver.solar_geometry import sun_position, total_poa_irradiance
 from engine.solver.sky_radiation import effective_sky_temp_k, net_radiative_loss_wm2, STEFAN_BOLTZMANN
 from engine.solver.infiltration import combined_ach, check_safety_interlock, SafetyInterlockResult
+from engine.solver.night_gate import NightGateSchedule, effective_leakage_area_cm2
 
 CONVECTION_COEFF_INSIDE = 8.0   # W/(m^2 K), still indoor air, ASHRAE default
 CONVECTION_COEFF_OUTSIDE_BASE = 15.0  # W/(m^2 K) at low wind, scales with wind speed
@@ -60,6 +61,7 @@ class GeometrySpec:
     ceiling_height_m: float
     leakage_area_cm2: float
     terrain_shelter_class: int = 3
+    night_gate: NightGateSchedule | None = None  # Phase 5: None = no Night Gate fitted
 
     @property
     def volume_m3(self) -> float:
@@ -89,6 +91,7 @@ class SimResult:
     min_indoor_temp_c: float
     max_indoor_temp_c: float
     mean_ach: float
+    night_gate_hours_closed: float = 0.0  # Phase 5: hours/day the gate was scheduled closed (0 if none fitted)
 
 
 def _outside_convection_coeff(wind_speed_ms: float) -> float:
@@ -234,7 +237,8 @@ def simulate(
 
             ach = combined_ach(
                 wind, T[indoor_air_idx], t_out_k,
-                geometry.leakage_area_cm2, geometry.volume_m3,
+                effective_leakage_area_cm2(local_hour, geometry.leakage_area_cm2, geometry.night_gate),
+                geometry.volume_m3,
                 geometry.ceiling_height_m, site.elevation_m,
                 geometry.terrain_shelter_class,
             )
@@ -264,6 +268,7 @@ def simulate(
         min_indoor_temp_c=min(indoor_out),
         max_indoor_temp_c=max(indoor_out),
         mean_ach=mean_ach,
+        night_gate_hours_closed=geometry.night_gate.hours_closed_per_day() if geometry.night_gate else 0.0,
     )
 
 
@@ -276,6 +281,7 @@ def make_simple_box_geometry(
     floor_area_m2: float,
     ceiling_height_m: float,
     leakage_area_cm2: float = 200.0,
+    night_gate: NightGateSchedule | None = None,
 ) -> GeometrySpec:
     """
     Convenience builder: a simple rectangular single-room shelter (4 walls,
@@ -316,4 +322,5 @@ def make_simple_box_geometry(
         floor_area_m2=floor_area_m2,
         ceiling_height_m=ceiling_height_m,
         leakage_area_cm2=leakage_area_cm2,
+        night_gate=night_gate,
     )
