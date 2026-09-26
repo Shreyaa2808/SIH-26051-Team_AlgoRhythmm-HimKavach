@@ -1,0 +1,180 @@
+{
+  "_schema": {
+    "k": "thermal conductivity, W/(m·K)",
+    "rho": "density, kg/m^3",
+    "cp": "specific heat capacity, J/(kg·K)",
+    "cost_per_m3_inr": "approximate installed material cost, INR/m^3 (2026 estimate, high-altitude logistics premium included where noted)",
+    "cost_note": "flag if cost includes remote-site transport premium",
+    "citation": "source for k/rho/cp values"
+  },
+  "materials": [
+    {
+      "id": "expanded_polystyrene_eps",
+      "name": "Expanded Polystyrene (EPS) board",
+      "category": "insulation",
+      "k": 0.036,
+      "rho": 20,
+      "cp": 1450,
+      "cost_per_m3_inr": 4500,
+      "cost_note": "does not include remote transport premium",
+      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 26, Table 4"
+    },
+    {
+      "id": "extruded_polystyrene_xps",
+      "name": "Extruded Polystyrene (XPS) board",
+      "category": "insulation",
+      "k": 0.029,
+      "rho": 35,
+      "cp": 1450,
+      "cost_per_m3_inr": 7200,
+      "cost_note": "does not include remote transport premium",
+      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 26, Table 4"
+    },
+    {
+      "id": "polyurethane_foam_rigid",
+      "name": "Rigid Polyurethane (PUR) foam",
+      "category": "insulation",
+      "k": 0.024,
+      "rho": 32,
+      "cp": 1400,
+      "cost_per_m3_inr": 9500,
+      "cost_note": "does not include remote transport premium",
+      "citation": "ISO 10456:2007, Table 3"
+    },
+    {
+      "id": "mineral_wool",
+      "name": "Mineral wool (rock wool) batt",
+      "category": "insulation",
+      "k": 0.040,
+      "rho": 100,
+      "cp": 840,
+      "cost_per_m3_inr": 5800,
+      "cost_note": "does not include remote transport premium",
+      "citation": "ISO 10456:2007, Table 3"
+    },
+    {
+      "id": "vacuum_insulation_panel",
+      "name": "Vacuum Insulation Panel (VIP)",
+      "category": "insulation",
+      "k": 0.007,
+      "rho": 190,
+      "cp": 1000,
+      "cost_per_m3_inr": 65000,
+      "cost_note": "premium high-performance option; fragile, needs protective casing",
+      "citation": "Alam et al., 'Vacuum Insulation Panels for building applications', Applied Energy 2011"
+    },
+    {
+      "id": "local_stone_masonry",
+      "name": "Local stone masonry (Ladakh granite/schist, dry-set)",
+      "category": "structural/thermal mass",
+      "k": 2.2,
+      "rho": 2600,
+      "cp": 850,
+      "cost_per_m3_inr": 2500,
+      "cost_note": "locally sourced near Leh/Dras, transport premium minimal",
+      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 26, Table 1 (granite); local sourcing note per DIHAR field reports"
+    },
+    {
+      "id": "rammed_earth",
+      "name": "Rammed earth wall",
+      "category": "structural/thermal mass",
+      "k": 1.1,
+      "rho": 2000,
+      "cp": 1000,
+      "cost_per_m3_inr": 3200,
+      "cost_note": "labor-intensive but low material transport cost",
+      "citation": "Hall & Allinson, 'Analysis of the hygrothermal functional properties of stabilised rammed earth', Building and Environment 2009"
+    },
+    {
+      "id": "sun_dried_mud_brick_adobe",
+      "name": "Sun-dried mud brick (traditional Ladakhi 'sokpa')",
+      "category": "structural/thermal mass",
+      "k": 0.75,
+      "rho": 1600,
+      "cp": 1000,
+      "cost_per_m3_inr": 1800,
+      "cost_note": "very low cost, locally made; used in traditional Ladakhi construction",
+      "citation": "Rijal & Yoshida, 'Thermal performance of traditional Ladakhi houses', Journal of Asian Architecture 2005"
+    },
+    {
+      "id": "cross_laminated_timber_clt",
+      "name": "Cross-Laminated Timber (CLT) panel",
+      "category": "structural",
+      "k": 0.13,
+      "rho": 470,
+      "cp": 1600,
+      "cost_per_m3_inr": 55000,
+      "cost_note": "prefab panel, includes standard transport but not helicopter/high-altitude premium",
+      "citation": "ISO 10456:2007, Table 3 (softwood); CLT handbook, FPInnovations 2019"
+    },
+    {
+      "id": "structural_insulated_panel_sip",
+      "name": "Structural Insulated Panel (SIP, EPS core + OSB skins)",
+      "category": "structural + insulation composite",
+      "k": 0.033,
+      "rho": 45,
+      "cp": 1400,
+      "cost_per_m3_inr": 18000,
+      "cost_note": "effective composite value; prefab, modular, fast to erect",
+      "citation": "SIPA (Structural Insulated Panel Association) Technical Bulletin, effective U-value data; ASHRAE 2021 for core k"
+    },
+    {
+      "id": "galvanized_steel_frame",
+      "name": "Galvanized steel structural frame",
+      "category": "structural",
+      "k": 50.0,
+      "rho": 7850,
+      "cp": 450,
+      "cost_per_m3_inr": 380000,
+      "cost_note": "priced as structural framing member volume, not cladding",
+      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 26, Table 1 (steel)"
+    },
+    {
+      "id": "aerated_autoclaved_concrete_aac",
+      "name": "Autoclaved Aerated Concrete (AAC) block",
+      "category": "structural/thermal mass",
+      "k": 0.16,
+      "rho": 550,
+      "cp": 1000,
+      "cost_per_m3_inr": 4200,
+      "cost_note": "does not include remote transport premium; blocks are bulky/fragile for helicopter transport",
+      "citation": "ISO 10456:2007, Table 3"
+    },
+    {
+      "id": "double_glazed_low_e_window",
+      "name": "Double-glazed Low-E window unit",
+      "category": "glazing",
+      "k": 0.8,
+      "rho": 2500,
+      "cp": 840,
+      "cost_per_m3_inr": null,
+      "cost_per_m2_inr": 6500,
+      "cost_note": "priced per m^2 of glazing area (standard practice), not per m^3; U-value ~1.1-1.4 W/m2K typical",
+      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 15; ISO 10077-1 for U-value convention"
+    },
+    {
+      "id": "triple_glazed_krypton_window",
+      "name": "Triple-glazed, krypton-filled, Low-E window unit",
+      "category": "glazing",
+      "k": 0.6,
+      "rho": 2500,
+      "cp": 840,
+      "cost_per_m3_inr": null,
+      "cost_per_m2_inr": 14000,
+      "cost_note": "priced per m^2; premium cold-climate glazing, U-value ~0.6-0.8 W/m2K",
+      "citation": "Passive House Institute component database; ISO 10077-1"
+    },
+    {
+      "id": "reflective_foil_radiant_barrier",
+      "name": "Reflective foil radiant barrier (roof underlay)",
+      "category": "radiant control",
+      "k": 0.035,
+      "rho": 140,
+      "cp": 1200,
+      "cost_per_m3_inr": null,
+      "cost_per_m2_inr": 250,
+      "cost_note": "priced per m^2 as thin membrane; effective emissivity ~0.05, reduces radiant heat loss to sky",
+      "citation": "ASTM C1224; manufacturer datasheets (typical foil-faced polyethylene bubble insulation)"
+    }
+  ]
+}
