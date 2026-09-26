@@ -64,7 +64,7 @@ export default function ConfigForm({ onResult }) {
   );
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 480 }}>
+    <form onSubmit={handleSubmit} className="config-form">
       <h2>Shelter Configuration</h2>
 
       <label>
