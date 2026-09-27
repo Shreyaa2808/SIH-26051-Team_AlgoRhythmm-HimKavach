@@ -6,6 +6,7 @@ const TABS = [
   { id: 'optimize', label: '5. Multi-Objective', icon: '🔥' },
   { id: 'benchmark', label: '6. ANSYS Benchmark', icon: '✅' },
   { id: 'telemetry', label: '7. Real-Time Telemetry', icon: '📡' },
+  { id: 'blueprint', label: '8. Blueprint Output', icon: '📐' },
 ];
 
 export default function TabNav({ active, onChange, unlockedTabs }) {

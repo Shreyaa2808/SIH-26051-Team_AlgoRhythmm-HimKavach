@@ -12,6 +12,7 @@ import SandboxModule from './components/SandboxModule';
 import BenchmarkModule from './components/BenchmarkModule';
 import DigitalTwinModule from './components/DigitalTwinModule';
 import TelemetryModule from './components/TelemetryModule';
+import BlueprintModule from './components/BlueprintModule';
 
 function App() {
   const [activeTab, setActiveTab] = useState('siting');
@@ -36,7 +37,8 @@ function App() {
     'optimize',
     'sandbox',
     'benchmark',
-    'telemetry'
+    'telemetry',
+    'blueprint'
   ];
 
   const runOptimize = async () => {
@@ -333,6 +335,12 @@ function App() {
           <TelemetryModule
             siteId={siteId}
           />
+        )}
+
+        {/* ================= BLUEPRINT OUTPUT ================= */}
+
+        {activeTab === 'blueprint' && (
+          <BlueprintModule />
         )}
 
       </div>

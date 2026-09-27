@@ -5,3 +5,4 @@ requests
 numpy
 scipy
 scikit-learn
+reportlab

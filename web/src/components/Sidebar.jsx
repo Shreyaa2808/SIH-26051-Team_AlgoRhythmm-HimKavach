@@ -9,6 +9,7 @@ const TABS = [
   { id: 'sandbox', label: 'Bulk / Sandbox', icon: '🏘️' },
   { id: 'benchmark', label: 'ANSYS Benchmark', icon: '✅' },
   { id: 'telemetry', label: 'Real-Time Telemetry', icon: '📡' },
+  { id: 'blueprint', label: 'Blueprint Output', icon: '📐' },
 ];
 
 export default function Sidebar({ active, onChange, unlockedTabs, siteLabel, scenarioLabel }) {

@@ -53,3 +53,5 @@ app.include_router(location_router)
 
 from api.routes.shelter import router as shelter_router
 app.include_router(shelter_router)
+from api.routes.blueprint import router as blueprint_router
+app.include_router(blueprint_router)
