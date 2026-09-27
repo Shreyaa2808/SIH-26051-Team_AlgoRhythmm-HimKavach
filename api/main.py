@@ -70,3 +70,6 @@ app.include_router(climate_status_router)
 
 from api.routes.sandbox import router as sandbox_router
 app.include_router(sandbox_router)
+
+from api.routes.location import router as location_router
+app.include_router(location_router)

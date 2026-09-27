@@ -11,7 +11,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from api.routes.simulate import SITE_COORDS, _load_climate_for_site
+from api.routes.simulate import SITE_COORDS, _load_climate_for_site, _get_site_coords
 from engine.climate.design_days import resolve_design_day
 from engine.materials.loader import MaterialsLibrary
 from engine.retrofit.baseline import RetrofitBaseline
@@ -86,13 +86,7 @@ class RetrofitRankResponse(BaseModel):
 
 @router.post("/retrofit/rank", response_model=RetrofitRankResponse)
 def retrofit_rank(req: RetrofitRankRequest) -> RetrofitRankResponse:
-    if req.site_id not in SITE_COORDS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown site_id '{req.site_id}'. Valid: {list(SITE_COORDS)}",
-        )
-
-    coords = SITE_COORDS[req.site_id]
+    coords = _get_site_coords(req.site_id)
     site = SiteSpec(lat_deg=coords["lat"], lon_deg=coords["lon"], elevation_m=coords["elevation_m"])
     climate = _load_climate_for_site(req.site_id)
 

@@ -20,6 +20,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from data.climate.loader import ClimateSeries
+from data.climate.dynamic import get_custom_site_coords
 from engine.climate.design_days import resolve_design_day
 from engine.materials.loader import MaterialsLibrary
 from engine.solver.thermal_solver import (
@@ -41,6 +42,27 @@ SITE_COORDS = {
     "siachen": {"lat": 35.5000, "lon": 77.0000, "elevation_m": 5500},
     "dras": {"lat": 34.4333, "lon": 75.7667, "elevation_m": 3230},
 }
+
+
+def _get_site_coords(site_id: str) -> dict:
+    """Resolves a site_id from EITHER the three fixed presets above OR
+    the custom-site registry that POST /location/resolve writes to when
+    the user picks a point off the live map / by coordinates / by place
+    search. This is the only change needed to make every endpoint that
+    already takes a site_id (this file, optimize.py, retrofit.py) work
+    for an arbitrary location, with zero further edits to those files."""
+    if site_id in SITE_COORDS:
+        return SITE_COORDS[site_id]
+    custom = get_custom_site_coords(site_id)
+    if custom is not None:
+        return custom
+    raise HTTPException(
+        status_code=400,
+        detail=(
+            f"Unknown site_id '{site_id}'. Pick a location on the map "
+            f"(POST /location/resolve first) or use a preset: {list(SITE_COORDS)}"
+        ),
+    )
 
 
 class SimulateRequest(BaseModel):
@@ -99,13 +121,7 @@ def _load_climate_for_site(site_id: str) -> ClimateSeries:
 
 @router.post("/simulate", response_model=SimulateResponse)
 def run_simulation(req: SimulateRequest) -> SimulateResponse:
-    if req.site_id not in SITE_COORDS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown site_id '{req.site_id}'. Valid: {list(SITE_COORDS)}",
-        )
-
-    coords = SITE_COORDS[req.site_id]
+    coords = _get_site_coords(req.site_id)
     site = SiteSpec(lat_deg=coords["lat"], lon_deg=coords["lon"], elevation_m=coords["elevation_m"])
 
     climate = _load_climate_for_site(req.site_id)

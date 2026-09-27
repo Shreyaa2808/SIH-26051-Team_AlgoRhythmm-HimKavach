@@ -1,11 +1,5 @@
 import { useState, useEffect } from 'react';
 
-const SITES = [
-  { id: 'leh', label: 'Leh' },
-  { id: 'siachen', label: 'Siachen' },
-  { id: 'dras', label: 'Dras' },
-];
-
 export default function RetrofitForm({ onResult, defaultSiteId, designDay }) {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -85,14 +79,10 @@ export default function RetrofitForm({ onResult, defaultSiteId, designDay }) {
         required, since there's nothing for an optimizer to fill in.
       </p>
 
-      <label>
-        Site
-        <select value={form.site_id} onChange={(e) => handleChange('site_id', e.target.value)}>
-          {SITES.map((s) => (
-            <option key={s.id} value={s.id}>{s.label}</option>
-          ))}
-        </select>
-      </label>
+      <p className="form-note">
+        Site: <strong>{form.site_id}</strong> — chosen on the map/coordinates screen; go back to
+        change it.
+      </p>
 
       <label>
         Floor area (m²)
