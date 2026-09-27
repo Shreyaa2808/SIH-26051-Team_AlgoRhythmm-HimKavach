@@ -1,4 +1,3 @@
-
 """
 API entrypoint. Run with:
     uvicorn api.main:app --reload --port 8000
@@ -73,3 +72,6 @@ app.include_router(sandbox_router)
 
 from api.routes.location import router as location_router
 app.include_router(location_router)
+
+from api.routes.shelter import router as shelter_router
+app.include_router(shelter_router)

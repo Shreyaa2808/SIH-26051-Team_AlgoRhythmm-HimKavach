@@ -68,5 +68,12 @@
     "elevation_m": 3267.0,
     "label": "Leh Kushok Bakula Rimpochee Airport, NH1, Murtse Ibex Colony, Skalzang Ling, Leh, Leh district, Ladakh, 194195, India",
     "resolved_at": 1790513862.3560882
+  },
+  "custom_34p185_77p596": {
+    "lat": 34.18454,
+    "lon": 77.59644,
+    "elevation_m": 3759.0,
+    "label": "Leh Khardung La Road, Chaktsal Gang, Leh, Leh district, Ladakh, 194101, India",
+    "resolved_at": 1790515669.481073
   }
 }
