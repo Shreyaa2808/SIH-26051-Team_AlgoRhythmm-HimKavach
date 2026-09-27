@@ -9,6 +9,9 @@ export default function RetrofitResults({ data }) {
       <div className="baseline-card">
         <p>Coldest indoor hour: <strong>{baseline.comfort_coldest_hour_c.toFixed(1)}°C</strong></p>
         <p>Wall U-value: <strong>{baseline.wall_u_value_wm2k.toFixed(3)} W/m²K</strong></p>
+        {baseline.carbon_kgco2e != null && (
+          <p>Embodied carbon: <strong>{baseline.carbon_kgco2e.toFixed(0)} kgCO₂e</strong></p>
+        )}
         <p>
           Safety: {baseline.safety_passed
             ? <span className="pass">✅ Passed</span>
@@ -27,6 +30,9 @@ export default function RetrofitResults({ data }) {
             {r.added_cost_inr != null && <p>Added cost: ₹{r.added_cost_inr.toLocaleString()}</p>}
             {r.cost_per_degree_inr != null && (
               <p>₹{r.cost_per_degree_inr.toFixed(0)} per °C improved</p>
+            )}
+            {r.added_carbon_kgco2e != null && (
+              <p>Added carbon: {r.added_carbon_kgco2e.toFixed(1)} kgCO₂e</p>
             )}
             <p className="uvalue">New wall U-value: {r.wall_u_value_wm2k.toFixed(3)} W/m²K</p>
           </div>

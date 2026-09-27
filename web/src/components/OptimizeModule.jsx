@@ -6,8 +6,15 @@ export default function OptimizeModule({ data, onExportCSV, onExportPDF }) {
   const maxPerf = [...data.pareto_front].sort(
     (a, b) => b.comfort_coldest_hour_c - a.comfort_coldest_hour_c
   )[0];
+  const hasCarbon = data.pareto_front.some((d) => d.carbon_kgco2e != null);
+  const lowestCarbon = hasCarbon
+    ? [...data.pareto_front]
+        .filter((d) => d.carbon_kgco2e != null)
+        .sort((a, b) => a.carbon_kgco2e - b.carbon_kgco2e)[0]
+    : null;
   const balanced =
-    data.pareto_front.find((d) => d !== cheapest && d !== maxPerf) || data.pareto_front[Math.floor(data.pareto_front.length / 2)];
+    data.pareto_front.find((d) => d !== cheapest && d !== maxPerf && d !== lowestCarbon) ||
+    data.pareto_front[Math.floor(data.pareto_front.length / 2)];
 
   const Card = ({ tag, tagClass, title, d }) => (
     <div className={`pareto-card ${tagClass === 'balanced-tag' ? 'balanced' : ''}`}>
@@ -17,10 +24,14 @@ export default function OptimizeModule({ data, onExportCSV, onExportPDF }) {
         <div><span>Capital Cost</span><strong>₹{d.cost_inr.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong></div>
         <div><span>Weight</span><strong>{d.weight_kg.toFixed(0)} kg</strong></div>
         <div><span>Coldest Hour</span><strong>{d.comfort_coldest_hour_c.toFixed(1)}°C</strong></div>
-        <div><span>Safety</span><strong>{d.safety_passed ? '✅ Pass' : '❌ Fail'}</strong></div>
+        <div>
+          <span>Carbon</span>
+          <strong>{d.carbon_kgco2e != null ? `${d.carbon_kgco2e.toFixed(0)} kgCO₂e` : '—'}</strong>
+        </div>
       </div>
       <p className="spec-line"><strong>Wall:</strong> {d.wall_material_id.replaceAll('_', ' ')} ({d.wall_thickness_m.toFixed(2)}m)</p>
       <p className="spec-line"><strong>Insulation:</strong> {d.insulation_material_id.replaceAll('_', ' ')} ({d.insulation_thickness_m.toFixed(2)}m)</p>
+      <p className="spec-line">{d.safety_passed ? '✅ Safety passed' : '❌ Safety failed'}</p>
     </div>
   );
 
@@ -42,6 +53,9 @@ export default function OptimizeModule({ data, onExportCSV, onExportPDF }) {
         <Card tag="Cheapest" tagClass="cheapest" title="Lowest Capital Cost Design" d={cheapest} />
         <Card tag="Balanced" tagClass="balanced-tag" title="Balanced Cost/Comfort Design" d={balanced} />
         <Card tag="Max Performance" tagClass="max" title="Maximum Comfort Design" d={maxPerf} />
+        {lowestCarbon && (
+          <Card tag="Lowest Carbon" tagClass="cheapest" title="Lowest Embodied Carbon Design" d={lowestCarbon} />
+        )}
       </div>
     </div>
   );
