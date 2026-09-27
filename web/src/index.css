@@ -352,3 +352,74 @@ button[type="submit"]:disabled, .primary-btn:disabled { opacity: 0.5; cursor: no
 .sidebar-footer { padding-top: 1rem; border-top: 1px solid var(--glass-border); font-size: 0.75rem; }
 
 .main-content { flex: 1; padding: 2rem 2.5rem; max-width: 1100px; }
+/* --- Location Picker (map / coords / place search) --- */
+.location-picker { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.location-search-row { display: flex; gap: 0.6rem; }
+.location-search-row input[type="text"] {
+  flex: 1;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.secondary-btn {
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.secondary-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.location-search-results {
+  list-style: none;
+  margin: -0.4rem 0 0;
+  padding: 0.3rem;
+  border-radius: 8px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  max-height: 220px;
+  overflow-y: auto;
+}
+.location-search-results li {
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+.location-search-results li:hover { background: var(--accent-soft); color: var(--text); }
+
+.preset-chip-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.preset-chip {
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.preset-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+.location-map-wrap {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--card-shadow);
+}
+
+.coord-input-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; }
+
+@media (max-width: 640px) {
+  .location-search-row { flex-direction: column; }
+  .coord-input-row { grid-template-columns: 1fr; }
+}

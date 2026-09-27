@@ -15,7 +15,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from api.routes.simulate import SITE_COORDS, _load_climate_for_site
+from api.routes.simulate import SITE_COORDS, _load_climate_for_site, _get_site_coords
 from engine.climate.design_days import resolve_design_day
 from engine.materials.loader import MaterialsLibrary
 from engine.optimizer.optimize import OptimizeConfig, run_new_build_optimization
@@ -91,13 +91,7 @@ class OptimizeResponse(BaseModel):
 
 @router.post("/optimize", response_model=OptimizeResponse)
 def run_optimization(req: OptimizeRequest) -> OptimizeResponse:
-    if req.site_id not in SITE_COORDS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown site_id '{req.site_id}'. Valid: {list(SITE_COORDS)}",
-        )
-
-    coords = SITE_COORDS[req.site_id]
+    coords = _get_site_coords(req.site_id)
     site = SiteSpec(
         lat_deg=coords["lat"],
         lon_deg=coords["lon"],

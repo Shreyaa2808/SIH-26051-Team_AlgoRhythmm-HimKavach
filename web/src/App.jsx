@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Sidebar from './components/Sidebar';
-import SiteMap from './components/SiteMap';
+import LocationPicker from './components/LocationPicker';
 import ConfigForm from './components/ConfigForm';
 import RetrofitForm from './components/RetrofitForm';
 import RetrofitResults from './components/RetrofitResults';
@@ -10,11 +10,13 @@ import MaterialsModule from './components/MaterialsModule';
 import OptimizeModule from './components/OptimizeModule';
 import BenchmarkModule from './components/BenchmarkModule';
 
-const SITE_LABELS = { leh: 'Leh (Capital)', siachen: 'Siachen', dras: 'Dras' };
-
 function App() {
   const [activeTab, setActiveTab] = useState('siting');
-  const [siteId, setSiteId] = useState(null);
+  // location replaces the old fixed-3-site `siteId` string: it's whatever
+  // POST /location/resolve returned for a map click / typed coordinates /
+  // a searched place name -- { site_id, lat, lon, elevation_m, label, area_m2 }.
+  const [location, setLocation] = useState(null);
+  const siteId = location?.site_id ?? null;
   const [designDay, setDesignDay] = useState('coldest_winter_night');
   const [designMode, setDesignMode] = useState(null);
 
@@ -70,20 +72,20 @@ function App() {
         active={activeTab}
         onChange={setActiveTab}
         unlockedTabs={unlockedTabs}
-        siteLabel={siteId ? SITE_LABELS[siteId] : null}
+        siteLabel={location?.label ?? null}
         scenarioLabel={designDay}
       />
 
       <div className="main-content">
         {activeTab === 'siting' && (
           <div>
-            {!siteId && <SiteMap onSelect={setSiteId} />}
+            {!siteId && <LocationPicker onResolved={setLocation} />}
 
             {siteId && designMode === null && (
               <>
-                <button className="back-btn" onClick={() => setSiteId(null)}>← Change site</button>
+                <button className="back-btn" onClick={() => setLocation(null)}>← Change location</button>
                 <div className="mode-select">
-                  <h2>Designing for {SITE_LABELS[siteId]} — what next?</h2>
+                  <h2>Designing for {location.label} ({location.elevation_m.toFixed(0)} m) — what next?</h2>
                   <button onClick={() => setDesignMode('new')}>Design New Shelter</button>
                   <button onClick={() => setDesignMode('retrofit')}>Retrofit Existing Shelter</button>
                 </div>
