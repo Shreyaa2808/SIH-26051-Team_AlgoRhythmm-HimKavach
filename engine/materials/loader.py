@@ -30,6 +30,8 @@ class Material:
     cost_per_m2_inr: Optional[float]
     cost_note: str
     citation: str
+    carbon_kgco2e_per_kg: Optional[float] = None
+    carbon_citation: str = ""
 
     @property
     def thermal_diffusivity(self) -> float:
@@ -54,6 +56,8 @@ class MaterialsLibrary:
                 cost_per_m2_inr=m.get("cost_per_m2_inr"),
                 cost_note=m.get("cost_note", ""),
                 citation=m.get("citation", ""),
+                carbon_kgco2e_per_kg=m.get("carbon_kgco2e_per_kg"),
+                carbon_citation=m.get("carbon_citation", ""),
             )
 
     def get(self, material_id: str) -> Material:
