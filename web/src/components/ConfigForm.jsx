@@ -6,22 +6,21 @@ const SITES = [
   { id: 'dras', label: 'Dras' },
 ];
 
-export default function ConfigForm({ onResult, defaultSiteId }) {
+export default function ConfigForm({ onResult, defaultSiteId, designDay }) {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-const [form, setForm] = useState({
-  site_id: defaultSiteId || 'leh',
-  day_of_year: 15,
-  wall_material_id: 'local_stone_masonry',
-  insulation_material_id: 'expanded_polystyrene_eps',
-  wall_thickness_m: 0.3,
-  insulation_thickness_m: 0.1,
-  floor_area_m2: 16.0,
-  ceiling_height_m: 2.4,
-  night_gate_enabled: false,
-});
+  const [form, setForm] = useState({
+    site_id: defaultSiteId || 'leh',
+    wall_material_id: 'local_stone_masonry',
+    insulation_material_id: 'expanded_polystyrene_eps',
+    wall_thickness_m: 0.3,
+    insulation_thickness_m: 0.1,
+    floor_area_m2: 16.0,
+    ceiling_height_m: 2.4,
+    night_gate_enabled: false,
+  });
 
   useEffect(() => {
     fetch('http://localhost:8000/materials')
@@ -38,11 +37,17 @@ const [form, setForm] = useState({
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    const payload = {
+      ...form,
+      design_day: designDay,
+    };
+
     try {
       const res = await fetch('http://localhost:8000/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const detail = await res.json().catch(() => ({}));
@@ -67,6 +72,10 @@ const [form, setForm] = useState({
   return (
     <form onSubmit={handleSubmit} className="config-form">
       <h2>Shelter Configuration</h2>
+      <p className="form-note">
+        Design day: <strong>{designDay?.replaceAll('_', ' ') || 'not selected'}</strong> — change it from the
+        Climate Engine tab.
+      </p>
 
       <label>
         Site
@@ -80,17 +89,6 @@ const [form, setForm] = useState({
             </option>
           ))}
         </select>
-      </label>
-
-      <label>
-        Day of year (1-365)
-        <input
-          type="number"
-          min="1"
-          max="365"
-          value={form.day_of_year}
-          onChange={(e) => handleChange('day_of_year', Number(e.target.value))}
-        />
       </label>
 
       <label>
@@ -170,20 +168,20 @@ const [form, setForm] = useState({
         />
       </label>
 
-<label className="checkbox-label">
-  <input
-    type="checkbox"
-    checked={form.night_gate_enabled}
-    onChange={(e) => handleChange('night_gate_enabled', e.target.checked)}
-  />
-  Enable Adaptive Night Gate (closes envelope at night, reopens by day)
-</label>
+      <label className="checkbox-label">
+        <input
+          type="checkbox"
+          checked={form.night_gate_enabled}
+          onChange={(e) => handleChange('night_gate_enabled', e.target.checked)}
+        />
+        Enable Adaptive Night Gate (closes envelope at night, reopens by day)
+      </label>
 
       <button type="submit" disabled={loading}>
         {loading ? 'Simulating...' : 'Simulate'}
       </button>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p className="form-error">{error}</p>}
     </form>
   );
 }

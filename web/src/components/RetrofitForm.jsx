@@ -6,7 +6,7 @@ const SITES = [
   { id: 'dras', label: 'Dras' },
 ];
 
-export default function RetrofitForm({ onResult, defaultSiteId }) {
+export default function RetrofitForm({ onResult, defaultSiteId, designDay }) {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -14,7 +14,6 @@ export default function RetrofitForm({ onResult, defaultSiteId }) {
 
   const [form, setForm] = useState({
     site_id: defaultSiteId || 'leh',
-    day_of_year: 15,
     floor_area_m2: '',
     ceiling_height_m: '',
     leakage_area_cm2: '',
@@ -43,7 +42,7 @@ export default function RetrofitForm({ onResult, defaultSiteId }) {
 
     const payload = {
       ...form,
-      day_of_year: Number(form.day_of_year),
+      design_day: designDay,
       floor_area_m2: Number(form.floor_area_m2),
       ceiling_height_m: Number(form.ceiling_height_m),
       leakage_area_cm2: Number(form.leakage_area_cm2),
@@ -81,7 +80,8 @@ export default function RetrofitForm({ onResult, defaultSiteId }) {
     <form onSubmit={handleSubmit} className="config-form">
       <h2>Existing Shelter Details</h2>
       <p className="form-note">
-        Retrofit mode describes a shelter that already exists — every field below is
+        Design day: <strong>{designDay?.replaceAll('_', ' ') || 'not selected'}</strong> — change it from the
+        Climate Engine tab. Retrofit mode describes a shelter that already exists — every field below is
         required, since there's nothing for an optimizer to fill in.
       </p>
 
@@ -92,15 +92,6 @@ export default function RetrofitForm({ onResult, defaultSiteId }) {
             <option key={s.id} value={s.id}>{s.label}</option>
           ))}
         </select>
-      </label>
-
-      <label>
-        Day of year (1-365)
-        <input
-          type="number" min="1" max="365"
-          value={form.day_of_year}
-          onChange={(e) => handleChange('day_of_year', e.target.value)}
-        />
       </label>
 
       <label>
