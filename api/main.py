@@ -64,3 +64,6 @@ app.include_router(design_days_router)
 
 from api.routes.benchmark import router as benchmark_router
 app.include_router(benchmark_router)
+
+from api.routes.climate_status import router as climate_status_router
+app.include_router(climate_status_router)

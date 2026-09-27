@@ -56,6 +56,32 @@ Populate the scenario picker from this call — don't hardcode the four names
 client-side; more may be added later. Send the chosen `id` as `design_day` on
 `/simulate`, `/optimize`, or `/retrofit/rank`.
 
+## GET /climate-status
+
+No request body. Reports what's cached on disk for the three sites, for
+the frontend's "using cached climate data from [date]" indicator — this
+does not fetch anything live, and does not require a working `/simulate`
+call to check.
+
+```json
+{
+  "sites": [
+    {"site_id": "leh", "cached": true, "source_file": "leh_2025.json",
+     "year_start": "20250101", "year_end": "20251231",
+     "record_count": 8760, "cached_at": "2026-09-26T09:14:48+00:00"}
+  ],
+  "all_cached": true,
+  "note": "..."
+}
+```
+
+`cached_at` is when the file was last written (proxy for "last fetched"),
+not the data's coverage window — use `year_start`/`year_end` for that; the
+two can legitimately disagree (a file re-fetched yesterday can still cover
+2025). `cached: false` (with everything else `null`) means that site needs
+`data/climate/fetch_nasa_power.py` run before `/simulate`, `/optimize`, or
+`/retrofit/rank` will work for it.
+
 ## GET /materials
 
 No request body. Returns the full materials library as a flat list:
