@@ -24,9 +24,13 @@ this document, not against the roadmap's original field list.
   /validation/ansys-benchmark`) — the roadmap listed this under Phase 2/4a
   as "add UI"; the API half is done, only the dashboard page (4a/4c) is
   outstanding.
-- **`carbon_kgco2e` is real but always `null`.** Not a bug, not a placeholder
-  waiting on formatting — there's no sourced embodied-carbon data in
-  `materials.json` yet. Render it as "—" / "not available", never as 0.
+- **`carbon_kgco2e` is now a real, sourced number on `/optimize` designs**
+  (backed by `materials.json`'s new `carbon_kgco2e_per_kg` + `carbon_citation`
+  fields, mostly ICE Database v3.0/v4.1). It can still be `null` on an
+  individual design if any of its materials has no carbon figure on file —
+  render that as "—" / "unknown", never as 0. It is a *reported* figure
+  (drives the new "Lowest Carbon" curated card) but is not one of the axes
+  the optimizer actually searches on — see `engine/optimizer/objectives.py`.
 
 ## Sites
 
@@ -62,13 +66,18 @@ No request body. Returns the full materials library as a flat list:
   "name": "...", "category": "...",
   "k": 0.035, "rho": 25.0, "cp": 1400.0,
   "cost_per_m3_inr": null, "cost_per_m2_inr": null,
-  "cost_note": null, "citation": "..."
+  "cost_note": null, "citation": "...",
+  "carbon_kgco2e_per_kg": 3.29, "carbon_citation": "..."
 }]
 ```
 
 `cost_per_m3_inr` / `cost_per_m2_inr` are per-material — only one of the two
 is populated depending on the material's category (volumetric vs. sheet
-goods). No `carbon_kgco2e` field exists here yet (see above).
+goods). `carbon_kgco2e_per_kg` is embodied carbon per kg of material,
+cradle-to-gate; a few vernacular/composite materials only have an
+order-of-magnitude estimate — `carbon_citation` says so per material where
+that applies, don't present those as equally certain as the database-backed
+ones.
 
 ## GET /validation/ansys-benchmark
 

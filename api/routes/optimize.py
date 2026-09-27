@@ -73,12 +73,19 @@ class OptimizeResponse(BaseModel):
     explore_next_offset: int
     pareto_front: list[RankedDesignOut]
     note: str = (
-        "carbon_kgco2e is always null: no embodied-carbon data exists in "
-        "materials.json yet. Objectives actually optimized: comfort, cost, weight. "
-        "curated_designs holds up to 5 labeled standout picks (Cheapest/Max "
-        "Performance/Lightest/Balanced); explore_more pages through the rest of "
-        "the front via explore_offset/explore_page_size. pareto_front is kept "
-        "for backward compatibility and always holds the full front."
+        "carbon_kgco2e is a real, sourced figure (see materials.json's "
+        "carbon_kgco2e_per_kg + carbon_citation per material) but is REPORTED "
+        "only, not one of the objectives the optimizer actually searches on — "
+        "those are comfort, cost, weight. carbon_kgco2e can still be null on "
+        "an individual design if any of its materials has no carbon figure on "
+        "file (a few vernacular/composite materials are flagged as estimates, "
+        "see materials.json's _carbon_data_note) — treat null as unknown, not "
+        "zero. curated_designs holds up to 6 labeled standout picks "
+        "(Cheapest/Max Performance/Lightest/Lowest Carbon/Balanced — Lowest "
+        "Carbon is omitted if no design in the front has a known carbon "
+        "figure); explore_more pages through the rest of the front via "
+        "explore_offset/explore_page_size. pareto_front is kept for backward "
+        "compatibility and always holds the full front."
     )
 
 

@@ -5,7 +5,9 @@
     "cp": "specific heat capacity, J/(kg·K)",
     "cost_per_m3_inr": "approximate installed material cost, INR/m^3 (2026 estimate, high-altitude logistics premium included where noted)",
     "cost_note": "flag if cost includes remote-site transport premium",
-    "citation": "source for k/rho/cp values"
+    "citation": "source for k/rho/cp values",
+    "carbon_kgco2e_per_kg": "embodied carbon, kg CO2-equivalent per kg of material, cradle-to-gate (A1-A3). See carbon_citation per material for source/uncertainty; several vernacular materials (rammed earth, adobe, straw-clay, VIP, SIP, radiant barrier) have no direct database entry and are order-of-magnitude ESTIMATES, flagged as such in their own citation.",
+    "carbon_citation": "source and caveats for carbon_kgco2e_per_kg"
   },
   "_known_discrepancies": "sun_dried_mud_brick_adobe and rammed_earth here use Rijal/Yoshida and Hall/Allinson values respectively; the HIAL/FHNW Ladakh report (Hall & Geissler 2022, Table 14, citing Zurcher & Frank 2018) gives materially different numbers for the same material classes (adobe k=0.13 rho=2210 cp=1000 vs our 0.75/1600/1000; rammed earth k=0.8 rho=1200 cp=1000 vs our 1.1/2000/1000). Earthen material properties vary widely with local soil composition, moisture content and compaction method, so this is a real uncertainty, not a data-entry error -- flag it in the limitations slide and consider running the optimizer/validation with both value sets to bound sensitivity.",
   "materials": [
@@ -18,7 +20,9 @@
       "cp": 1450,
       "cost_per_m3_inr": 4500,
       "cost_note": "does not include remote transport premium",
-      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 26, Table 4"
+      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 26, Table 4",
+      "carbon_kgco2e_per_kg": 3.29,
+      "carbon_citation": "Hammond & Jones, Inventory of Carbon & Energy (ICE) Database v3.0, University of Bath / Circular Ecology, 2019 — EPS insulation, cradle-to-gate (A1-A3)."
     },
     {
       "id": "extruded_polystyrene_xps",
@@ -29,7 +33,9 @@
       "cp": 1450,
       "cost_per_m3_inr": 7200,
       "cost_note": "does not include remote transport premium",
-      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 26, Table 4"
+      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 26, Table 4",
+      "carbon_kgco2e_per_kg": 3.29,
+      "carbon_citation": "Hammond & Jones, Inventory of Carbon & Energy (ICE) Database v3.0, University of Bath / Circular Ecology, 2019 — XPS insulation, cradle-to-gate (A1-A3); ICE reports XPS close to EPS despite the different blowing agent."
     },
     {
       "id": "polyurethane_foam_rigid",
@@ -40,18 +46,22 @@
       "cp": 1400,
       "cost_per_m3_inr": 9500,
       "cost_note": "does not include remote transport premium",
-      "citation": "ISO 10456:2007, Table 3"
+      "citation": "ISO 10456:2007, Table 3",
+      "carbon_kgco2e_per_kg": 3.48,
+      "carbon_citation": "ICE-derived PIR/PUR rigid insulation factor as tabulated in Hasan et al., 'The Role of Embodied Carbon Databases...', Sustainability 2021 (citing ICE-insulation, PIR ~3.48 kgCO2e/kg)."
     },
     {
       "id": "mineral_wool",
       "name": "Mineral wool (rock wool) batt",
       "category": "insulation",
-      "k": 0.040,
+      "k": 0.04,
       "rho": 100,
       "cp": 840,
       "cost_per_m3_inr": 5800,
       "cost_note": "does not include remote transport premium",
-      "citation": "ISO 10456:2007, Table 3"
+      "citation": "ISO 10456:2007, Table 3",
+      "carbon_kgco2e_per_kg": 1.28,
+      "carbon_citation": "Hammond & Jones, Inventory of Carbon & Energy (ICE) Database v3.0, University of Bath / Circular Ecology, 2019 — mineral (rock) wool, cradle-to-gate."
     },
     {
       "id": "vacuum_insulation_panel",
@@ -62,7 +72,9 @@
       "cp": 1000,
       "cost_per_m3_inr": 65000,
       "cost_note": "premium high-performance option; fragile, needs protective casing",
-      "citation": "Alam et al., 'Vacuum Insulation Panels for building applications', Applied Energy 2011"
+      "citation": "Alam et al., 'Vacuum Insulation Panels for building applications', Applied Energy 2011",
+      "carbon_kgco2e_per_kg": 7.0,
+      "carbon_citation": "ESTIMATE, not an ICE-listed material: fumed-silica core + metallized-film envelope + evacuation process. Pavel & Blagoeva / JRC and Alam et al. (Applied Energy 2011) both note VIP has a materially higher and less standardized embodied footprint than EPS/XPS; no single authoritative per-kg figure found. Treat as order-of-magnitude only, flagged the same way materials.json already flags the adobe/rammed-earth uncertainty."
     },
     {
       "id": "local_stone_masonry",
@@ -73,7 +85,9 @@
       "cp": 850,
       "cost_per_m3_inr": 2500,
       "cost_note": "locally sourced near Leh/Dras, transport premium minimal",
-      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 26, Table 1 (granite); local sourcing note per DIHAR field reports"
+      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 26, Table 1 (granite); local sourcing note per DIHAR field reports",
+      "carbon_kgco2e_per_kg": 0.08,
+      "carbon_citation": "Hammond & Jones, Inventory of Carbon & Energy (ICE) Database v3.0, University of Bath / Circular Ecology, 2019 — natural stone (general, quarried + dressed), cradle-to-gate. Excludes long-distance haulage to site (see cost_note for the separate transport-cost premium)."
     },
     {
       "id": "rammed_earth",
@@ -84,7 +98,9 @@
       "cp": 1000,
       "cost_per_m3_inr": 3200,
       "cost_note": "labor-intensive but low material transport cost",
-      "citation": "Hall & Allinson, 'Analysis of the hygrothermal functional properties of stabilised rammed earth', Building and Environment 2009"
+      "citation": "Hall & Allinson, 'Analysis of the hygrothermal functional properties of stabilised rammed earth', Building and Environment 2009",
+      "carbon_kgco2e_per_kg": 0.024,
+      "carbon_citation": "Estimate for UNSTABILIZED rammed earth (no added cement), consistent with traditional Ladakhi practice: mechanical compaction energy only, no firing/calcination. If cement-stabilized (common in modern rammed earth), this can rise several-fold — cite per-project cement content if that variant is used. No ICE entry exists for rammed earth; figure follows the same order of magnitude reported for compacted-earth construction in general LCA literature (e.g. Reddy & Jagadish-style analyses of stabilized/unstabilized soil blocks)."
     },
     {
       "id": "sun_dried_mud_brick_adobe",
@@ -95,7 +111,9 @@
       "cp": 1000,
       "cost_per_m3_inr": 1800,
       "cost_note": "very low cost, locally made; used in traditional Ladakhi construction",
-      "citation": "Rijal & Yoshida, 'Thermal performance of traditional Ladakhi houses', Journal of Asian Architecture 2005"
+      "citation": "Rijal & Yoshida, 'Thermal performance of traditional Ladakhi houses', Journal of Asian Architecture 2005",
+      "carbon_kgco2e_per_kg": 0.023,
+      "carbon_citation": "Estimate for sun-dried (unfired) mud brick: manual forming + solar drying only, no kiln. Same caveat as rammed_earth above — figure is an order-of-magnitude estimate, not an ICE-sourced number, since sun-dried earthen units aren't in the standard databases."
     },
     {
       "id": "cross_laminated_timber_clt",
@@ -106,7 +124,9 @@
       "cp": 1600,
       "cost_per_m3_inr": 55000,
       "cost_note": "prefab panel, includes standard transport but not helicopter/high-altitude premium",
-      "citation": "ISO 10456:2007, Table 3 (softwood); CLT handbook, FPInnovations 2019"
+      "citation": "ISO 10456:2007, Table 3 (softwood); CLT handbook, FPInnovations 2019",
+      "carbon_kgco2e_per_kg": 0.42,
+      "carbon_citation": "Cradle-to-gate (A1-A3), EXCLUDING biogenic carbon storage. ICE v4.1 gives softwood lumber ~0.31 kgCO2e/kg for the fossil energy of felling/sawing/kiln-drying; CLT's adhesive bonding + additional processing pushes typical manufacturer EPDs to ~0.4-0.5. The wood itself also STORES roughly 1.6 kgCO2e/kg of biogenic carbon absorbed during growth — real, but declared separately under EN 15804+A2 rather than netted off here, because it's released again if the timber is later burned or left to decompose."
     },
     {
       "id": "structural_insulated_panel_sip",
@@ -117,7 +137,9 @@
       "cp": 1400,
       "cost_per_m3_inr": 18000,
       "cost_note": "effective composite value; prefab, modular, fast to erect",
-      "citation": "SIPA (Structural Insulated Panel Association) Technical Bulletin, effective U-value data; ASHRAE 2021 for core k"
+      "citation": "SIPA (Structural Insulated Panel Association) Technical Bulletin, effective U-value data; ASHRAE 2021 for core k",
+      "carbon_kgco2e_per_kg": 0.65,
+      "carbon_citation": "ESTIMATE: mass-weighted composite of OSB skins (~0.45-0.5 kgCO2e/kg, wood panel + resin) and EPS core (3.29 kgCO2e/kg, see expanded_polystyrene_eps), using the OSB skins' much higher density to weight their mass share despite the core's larger volume fraction. No single EPD covers this exact composite; treat as a rough figure, same 'effective composite value' caveat as the existing cost/k entries for this material."
     },
     {
       "id": "galvanized_steel_frame",
@@ -128,7 +150,9 @@
       "cp": 450,
       "cost_per_m3_inr": 380000,
       "cost_note": "priced as structural framing member volume, not cladding",
-      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 26, Table 1 (steel)"
+      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 26, Table 1 (steel)",
+      "carbon_kgco2e_per_kg": 1.63,
+      "carbon_citation": "ICE v4.1 general structural steel (~1.55 kgCO2e/kg, av. recycled content) plus an estimated +0.08 kgCO2e/kg for hot-dip galvanizing (zinc coating). Recycled-content steel can be materially lower (ICE gives ~0.45 for high-recycled steel) — this figure assumes ordinary/average recycled content, not a verified-recycled supply chain."
     },
     {
       "id": "aerated_autoclaved_concrete_aac",
@@ -139,7 +163,9 @@
       "cp": 1000,
       "cost_per_m3_inr": 4200,
       "cost_note": "does not include remote transport premium; blocks are bulky/fragile for helicopter transport",
-      "citation": "ISO 10456:2007, Table 3"
+      "citation": "ISO 10456:2007, Table 3",
+      "carbon_kgco2e_per_kg": 0.3,
+      "carbon_citation": "Hammond & Jones, Inventory of Carbon & Energy (ICE) Database v3.0, University of Bath / Circular Ecology, 2019 — aerated concrete block, cradle-to-gate (as tabulated in the public ICE summary; reference product rho ~750 kg/m3 vs. this entry's 550 kg/m3, so treat as same-category, not an exact density match)."
     },
     {
       "id": "double_glazed_low_e_window",
@@ -151,7 +177,9 @@
       "cost_per_m3_inr": null,
       "cost_per_m2_inr": 6500,
       "cost_note": "priced per m^2 of glazing area (standard practice), not per m^3; U-value ~1.1-1.4 W/m2K typical",
-      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 15; ISO 10077-1 for U-value convention"
+      "citation": "ASHRAE Fundamentals Handbook 2021, Ch. 15; ISO 10077-1 for U-value convention",
+      "carbon_kgco2e_per_kg": 0.86,
+      "carbon_citation": "Hammond & Jones, Inventory of Carbon & Energy (ICE) Database v3.0, University of Bath / Circular Ecology, 2019 — float glass, cradle-to-gate, applied to the glazing layer's mass only. Frame, spacer, Low-E coating and gas fill are NOT separately counted (consistent with cost_per_m2_inr, which also prices glazing area only, not the frame) — treat as a glass-only lower bound, not the full window-unit footprint."
     },
     {
       "id": "triple_glazed_krypton_window",
@@ -163,7 +191,9 @@
       "cost_per_m3_inr": null,
       "cost_per_m2_inr": 14000,
       "cost_note": "priced per m^2; premium cold-climate glazing, U-value ~0.6-0.8 W/m2K",
-      "citation": "Passive House Institute component database; ISO 10077-1"
+      "citation": "Passive House Institute component database; ISO 10077-1",
+      "carbon_kgco2e_per_kg": 0.86,
+      "carbon_citation": "Same float-glass basis as double_glazed_low_e_window (see that entry's citation) applied to this unit's (higher, 3-pane) glass mass. The krypton gas fill has a disproportionately high specific production footprint but a tiny mass share per unit; no reliable per-kg figure for krypton fill was found, so it is EXCLUDED here — this is a glass-only figure, likely a modest underestimate for this specific product."
     },
     {
       "id": "strawclay_block",
@@ -174,7 +204,9 @@
       "cp": 1500,
       "cost_per_m3_inr": null,
       "cost_note": "no INR cost data available; used in HIAL Ladakh passive solar houses",
-      "citation": "Hall & Geissler (FHNW), 'Thermal comfort in Passive Solar Houses in Ladakh' (2022), Table 14, citing Zurcher & Frank, Building Physics, 5th ed. 2018"
+      "citation": "Hall & Geissler (FHNW), 'Thermal comfort in Passive Solar Houses in Ladakh' (2022), Table 14, citing Zurcher & Frank, Building Physics, 5th ed. 2018",
+      "carbon_kgco2e_per_kg": 0.025,
+      "carbon_citation": "Estimate: raw straw + clay/soil binder, hand-formed, no firing — same order of magnitude as sun-dried adobe (see that entry), and for the same reason (no database entry exists for straw-clay construction specifically). Some LCA studies count straw's biogenic carbon and report straw-clay as net-negative; this figure does NOT include that credit, consistent with how cross_laminated_timber_clt's biogenic storage is also kept separate above."
     },
     {
       "id": "reflective_foil_radiant_barrier",
@@ -186,7 +218,10 @@
       "cost_per_m3_inr": null,
       "cost_per_m2_inr": 250,
       "cost_note": "priced per m^2 as thin membrane; effective emissivity ~0.05, reduces radiant heat loss to sky",
-      "citation": "ASTM C1224; manufacturer datasheets (typical foil-faced polyethylene bubble insulation)"
+      "citation": "ASTM C1224; manufacturer datasheets (typical foil-faced polyethylene bubble insulation)",
+      "carbon_kgco2e_per_kg": 1.5,
+      "carbon_citation": "ESTIMATE: thin primary-aluminium foil layer (ICE v4.1 primary aluminium ~13.1 kgCO2e/kg, but a small mass fraction of this laminated product) bonded to a plastic film/foam backing (~2 kgCO2e/kg range for generic PE film). No product-specific EPD was found; treat as a rough blended figure, not a verified number."
     }
-  ]
+  ],
+  "_carbon_data_note": "Added post-Phase-3 to fill the gap flagged since Phase 3 in README.md ('carbon_kgco2e is a real gap ... someone needs to source per-material embodied-carbon numbers with citations before this objective can exist for real'). Primary source is the ICE Database v3.0/v4.1 (Hammond & Jones, University of Bath / Circular Ecology) for conventional/industrial materials. Vernacular/traditional materials (rammed earth, sun-dried adobe, straw-clay) and a few composites (VIP, SIP, radiant barrier) have NO entry in ICE or comparable databases, so their figures are order-of-magnitude estimates flagged individually — same honesty standard as the existing adobe/rammed-earth k/rho/cp _known_discrepancies note below. These numbers are now wired into engine/optimizer/objectives.py as a REPORTED figure (shown to the user, used to pick a 'Lowest Carbon' curated design) but are deliberately NOT added to the NSGA-II search objective vector this pass — folding a 4th axis into the optimizer's domination/surrogate logic is a bigger, riskier change than reporting a real number on an already-existing front, and given the estimate-heavy entries above, treating carbon as an authoritative search target this early would overstate how solid this data is. Worth revisiting once the estimate-flagged entries have better sources."
 }

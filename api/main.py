@@ -43,6 +43,8 @@ def list_materials():
             "cost_per_m2_inr": getattr(m, "cost_per_m2_inr", None),
             "cost_note": getattr(m, "cost_note", None),
             "citation": getattr(m, "citation", None),
+            "carbon_kgco2e_per_kg": getattr(m, "carbon_kgco2e_per_kg", None),
+            "carbon_citation": getattr(m, "carbon_citation", None),
         }
         for m in _materials_lib.all()
     ]
