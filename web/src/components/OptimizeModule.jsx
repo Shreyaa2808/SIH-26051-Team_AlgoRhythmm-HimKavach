@@ -1,4 +1,4 @@
-export default function OptimizeModule({ data, onExportCSV, onExportPDF }) {
+export default function OptimizeModule({ data, onExportCSV, onExportPDF, onUseInSandbox }) {
   if (!data) return <p className="form-note">Run "Optimize This Design" from the Simulate tab first.</p>;
 
   const sorted = [...data.pareto_front].sort((a, b) => a.cost_inr - b.cost_inr);
@@ -32,6 +32,11 @@ export default function OptimizeModule({ data, onExportCSV, onExportPDF }) {
       <p className="spec-line"><strong>Wall:</strong> {d.wall_material_id.replaceAll('_', ' ')} ({d.wall_thickness_m.toFixed(2)}m)</p>
       <p className="spec-line"><strong>Insulation:</strong> {d.insulation_material_id.replaceAll('_', ' ')} ({d.insulation_thickness_m.toFixed(2)}m)</p>
       <p className="spec-line">{d.safety_passed ? '✅ Safety passed' : '❌ Safety failed'}</p>
+      {onUseInSandbox && (
+        <button type="button" className="use-in-sandbox-btn" onClick={() => onUseInSandbox(d)}>
+          🏘️ Use in Bulk / Sandbox →
+        </button>
+      )}
     </div>
   );
 

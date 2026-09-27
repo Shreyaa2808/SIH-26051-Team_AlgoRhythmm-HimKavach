@@ -86,6 +86,15 @@ class SimulateRequest(BaseModel):
     night_gate_close_hour: float = 19.0
     night_gate_open_hour: float = 7.0
     night_gate_closed_leakage_area_cm2: float = 60.0
+    # New parameters section (map/config roadmap follow-up): building
+    # orientation, roof slope, and an optional window. All default to the
+    # exact old flat-roof/no-window/true-north-facing behaviour, so every
+    # existing caller is unaffected.
+    orientation_deg: float = Field(0.0, ge=0, lt=360, description="Compass bearing wall_N faces; rotates the whole building")
+    roof_slope_deg: float = Field(0.0, ge=0, le=60, description="0 = flat roof; >0 = single-pitch roof at this tilt")
+    window_wall: str | None = Field(None, description="'N'/'E'/'S'/'W' (pre-rotation compass label) to cut a window into, or null for none")
+    window_area_m2: float = Field(0.0, ge=0.0, description="Glazing area cut from window_wall")
+    window_material_id: str = Field("double_glazed_low_e_window", description="Any materials.json entry with category 'glazing'")
 
 
 class SimulateResponse(BaseModel):
@@ -156,6 +165,11 @@ def run_simulation(req: SimulateRequest) -> SimulateResponse:
             floor_area_m2=req.floor_area_m2,
             ceiling_height_m=req.ceiling_height_m,
             leakage_area_cm2=req.leakage_area_cm2,
+            orientation_deg=req.orientation_deg,
+            roof_slope_deg=req.roof_slope_deg,
+            window_wall=req.window_wall,
+            window_area_m2=req.window_area_m2,
+            window_material_id=req.window_material_id,
             night_gate=(
                 NightGateSchedule(
                     close_hour=req.night_gate_close_hour,

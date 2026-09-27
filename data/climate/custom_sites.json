@@ -5,5 +5,68 @@
     "elevation_m": 8.0,
     "label": "Sardar Vallabhbhai National Institute of Technology, Dumas Road, Majura Taluka, Surat, Gujarat, 394518, India",
     "resolved_at": 1790495788.8630779
+  },
+  "custom_19p167_73p239": {
+    "lat": 19.1666237,
+    "lon": 73.2389064,
+    "elevation_m": 33.0,
+    "label": "Badlapur, Badlapur Station skywalk, Badlapur, Kulgaon Badlapur, Ambernath Subdistrict, Thane, Maharashtra, 421503, India",
+    "resolved_at": 1790495930.730962
+  },
+  "custom_33p101_78p311": {
+    "lat": 33.100745405144266,
+    "lon": 78.31054687500001,
+    "elevation_m": 4676.0,
+    "label": "Leh district, Ladakh, India",
+    "resolved_at": 1790498649.494817
+  },
+  "custom_21p167_72p788": {
+    "lat": 21.16722894971972,
+    "lon": 72.78771633926354,
+    "elevation_m": 9.0,
+    "label": "Sardar Vallabhbhai National Institute of Technology, Piplod Main Road, Majura Taluka, Surat, Gujarat, 395007, India",
+    "resolved_at": 1790501137.8081212
+  },
+  "custom_34p158_77p404": {
+    "lat": 34.15841,
+    "lon": 77.40417,
+    "elevation_m": 3539.0,
+    "label": "Leh district, Ladakh, India",
+    "resolved_at": 1790512914.097903
+  },
+  "custom_36p448_75p696": {
+    "lat": 36.4477991295848,
+    "lon": 75.69580078125001,
+    "elevation_m": 5081.0,
+    "label": "\u062a\u062d\u0635\u06cc\u0644 \u06c1\u0646\u0632\u06c1 \u0628\u0627\u0644\u0627\u0626\u06cc, \u0636\u0644\u0639 \u06c1\u0646\u0632\u06c1, \u06af\u0644\u06af\u062a \u0688\u0648\u06cc\u0698\u0646, \u06af\u0644\u06af\u062a \u0628\u0644\u062a\u0633\u062a\u0627\u0646, 15750, \u067e\u0627\u06a9\u0633\u062a\u0627\u0646",
+    "resolved_at": 1790513475.41204
+  },
+  "custom_34p053_77p701": {
+    "lat": 34.05266,
+    "lon": 77.70081,
+    "elevation_m": 3585.0,
+    "label": "Nyarma, Leh district, Ladakh, India",
+    "resolved_at": 1790513492.936749
+  },
+  "custom_33p807_79p816": {
+    "lat": 33.80654,
+    "lon": 79.81567,
+    "elevation_m": 4926.0,
+    "label": "\u591a\u739b\u4e61, \u65e5\u571f\u53bf \u0f62\u0f74\u0f0b\u0f50\u0f7c\u0f42\u0f0b\u0f62\u0fab\u0f7c\u0f44\u0f0b\u0f0d, \u963f\u91cc\u5730\u533a \u0f58\u0f44\u0f60\u0f0b\u0f62\u0f72\u0f66\u0f0b\u0f66\u0f0b\u0f41\u0f74\u0f63\u0f0b, \u897f\u85cf\u81ea\u6cbb\u533a \u0f56\u0f7c\u0f51\u0f0b\u0f62\u0f44\u0f0b\u0f66\u0f90\u0fb1\u0f7c\u0f44\u0f0b\u0f63\u0f97\u0f7c\u0f44\u0f66\u0f0d, \u4e2d\u56fd",
+    "resolved_at": 1790513765.68238
+  },
+  "custom_34p171_77p629": {
+    "lat": 34.17091,
+    "lon": 77.62939,
+    "elevation_m": 4220.0,
+    "label": "Saboo, Leh district, Ladakh, India",
+    "resolved_at": 1790513777.635805
+  },
+  "custom_34p135_77p552": {
+    "lat": 34.13454,
+    "lon": 77.55249,
+    "elevation_m": 3267.0,
+    "label": "Leh Kushok Bakula Rimpochee Airport, NH1, Murtse Ibex Colony, Skalzang Ling, Leh, Leh district, Ladakh, 194195, India",
+    "resolved_at": 1790513862.3560882
   }
 }

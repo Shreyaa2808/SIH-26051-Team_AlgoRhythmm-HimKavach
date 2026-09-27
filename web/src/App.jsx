@@ -8,17 +8,17 @@ import TemperatureChart from './components/TemperatureChart';
 import ClimateModule from './components/ClimateModule';
 import MaterialsModule from './components/MaterialsModule';
 import OptimizeModule from './components/OptimizeModule';
+import SandboxModule from './components/SandboxModule';
 import BenchmarkModule from './components/BenchmarkModule';
-import TelemetryModule from './components/TelemetryModule';
 import DigitalTwinModule from './components/DigitalTwinModule';
+import TelemetryModule from './components/TelemetryModule';
 
 function App() {
   const [activeTab, setActiveTab] = useState('siting');
-  // location replaces the old fixed-3-site `siteId` string: it's whatever
-  // POST /location/resolve returned for a map click / typed coordinates /
-  // a searched place name -- { site_id, lat, lon, elevation_m, label, area_m2 }.
+
   const [location, setLocation] = useState(null);
   const siteId = location?.site_id ?? null;
+
   const [designDay, setDesignDay] = useState('coldest_winter_night');
   const [designMode, setDesignMode] = useState(null);
 
@@ -26,18 +26,36 @@ function App() {
   const [retrofitResult, setRetrofitResult] = useState(null);
   const [optimizeResult, setOptimizeResult] = useState(null);
   const [optimizing, setOptimizing] = useState(false);
+  const [sandboxSeed, setSandboxSeed] = useState(null);
 
-  const unlockedTabs = ['siting', 'climate', 'materials', 'twin', 'optimize', 'benchmark', 'telemetry'];
+  const unlockedTabs = [
+    'siting',
+    'climate',
+    'materials',
+    'twin',
+    'optimize',
+    'sandbox',
+    'benchmark',
+    'telemetry'
+  ];
 
   const runOptimize = async () => {
     setOptimizing(true);
+
     try {
       const res = await fetch('http://localhost:8000/optimize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ site_id: simResult.site_id, design_day: designDay }),
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          site_id: simResult.site_id,
+          design_day: designDay
+        })
       });
+
       const data = await res.json();
+
       setOptimizeResult(data);
       setActiveTab('optimize');
     } catch (err) {
@@ -54,22 +72,57 @@ function App() {
 
   const exportOptimizeCSV = () => {
     if (!optimizeResult) return;
-    const rows = optimizeResult.pareto_front;
+
+    const rows =
+      optimizeResult.pareto_front ||
+      optimizeResult.curated_designs ||
+      [];
+
+    if (!rows.length) return;
+
     const headers = Object.keys(rows[0]).join(',');
-    const body = rows.map((r) => Object.values(r).join(',')).join('\n');
-    const blob = new Blob([headers + '\n' + body], { type: 'text/csv' });
+
+    const body = rows
+      .map((r) =>
+        Object.values(r)
+          .map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`)
+          .join(',')
+      )
+      .join('\n');
+
+    const blob = new Blob(
+      [headers + '\n' + body],
+      { type: 'text/csv' }
+    );
+
     const url = URL.createObjectURL(blob);
+
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'ladakh_adapt_designs.csv';
+    a.download = 'himkavach_designs.csv';
     a.click();
+
     URL.revokeObjectURL(url);
   };
 
-  const exportOptimizePDF = () => window.print();
+  const exportOptimizePDF = () => {
+    window.print();
+  };
+
+  const handleUseInSandbox = (d) => {
+    setSandboxSeed({
+      cost_inr: d.cost_inr,
+      weight_kg: d.weight_kg,
+      floor_area_m2: 16.0,
+      carbon_kgco2e: d.carbon_kgco2e
+    });
+
+    setActiveTab('sandbox');
+  };
 
   return (
     <div className="app-shell">
+
       <Sidebar
         active={activeTab}
         onChange={setActiveTab}
@@ -79,44 +132,123 @@ function App() {
       />
 
       <div className="main-content">
+
+        {/* ================= LOCATION / SITING ================= */}
+
         {activeTab === 'siting' && (
           <div>
-            {!siteId && <LocationPicker onResolved={setLocation} />}
+
+            {!siteId && (
+              <LocationPicker
+                onResolved={setLocation}
+              />
+            )}
 
             {siteId && designMode === null && (
               <>
-                <button className="back-btn" onClick={() => setLocation(null)}>← Change location</button>
+                <button
+                  className="back-btn"
+                  onClick={() => {
+                    setLocation(null);
+                    setSimResult(null);
+                    setRetrofitResult(null);
+                    setOptimizeResult(null);
+                  }}
+                >
+                  ← Change location
+                </button>
+
                 <div className="mode-select">
-                  <h2>Designing for {location.label} ({location.elevation_m.toFixed(0)} m) — what next?</h2>
-                  <button onClick={() => setDesignMode('new')}>Design New Shelter</button>
-                  <button onClick={() => setDesignMode('retrofit')}>Retrofit Existing Shelter</button>
+
+                  <h2>
+                    Designing for {location.label}{' '}
+                    ({location.elevation_m.toFixed(0)} m)
+                    — what next?
+                  </h2>
+
+                  <button
+                    onClick={() => setDesignMode('new')}
+                  >
+                    Design New Shelter
+                  </button>
+
+                  <button
+                    onClick={() => setDesignMode('retrofit')}
+                  >
+                    Retrofit Existing Shelter
+                  </button>
+
                 </div>
               </>
             )}
 
             {siteId && designMode === 'new' && (
               <>
-                <button className="back-btn" onClick={() => setDesignMode(null)}>← Back</button>
-                <ConfigForm defaultSiteId={siteId} designDay={designDay} onResult={handleNewSimResult} />
+                <button
+                  className="back-btn"
+                  onClick={() => setDesignMode(null)}
+                >
+                  ← Back
+                </button>
+
+                <ConfigForm
+                  defaultSiteId={siteId}
+                  designDay={designDay}
+                  onResult={handleNewSimResult}
+                />
 
                 {simResult && (
                   <div className="results">
+
                     <h2>Results</h2>
+
                     <TemperatureChart
                       hours={simResult.hours}
                       indoorTemps={simResult.indoor_temp_c}
                       outdoorTemps={simResult.outdoor_temp_c}
                     />
-                    <p>Min indoor temp: {simResult.min_indoor_temp_c.toFixed(1)}°C</p>
-                    <p>Max indoor temp: {simResult.max_indoor_temp_c.toFixed(1)}°C</p>
-                    <p>Wall U-value: {simResult.wall_u_value_wm2k.toFixed(3)} W/m²K</p>
-                    <p>Safety passed: {simResult.safety_passed ? '✅ Yes' : '❌ No'}</p>
+
+                    <p>
+                      Min indoor temp:{' '}
+                      {simResult.min_indoor_temp_c.toFixed(1)}°C
+                    </p>
+
+                    <p>
+                      Max indoor temp:{' '}
+                      {simResult.max_indoor_temp_c.toFixed(1)}°C
+                    </p>
+
+                    <p>
+                      Wall U-value:{' '}
+                      {simResult.wall_u_value_wm2k.toFixed(3)}
+                      {' '}W/m²K
+                    </p>
+
+                    <p>
+                      Safety passed:{' '}
+                      {simResult.safety_passed
+                        ? '✅ Yes'
+                        : '❌ No'}
+                    </p>
+
                     {simResult.night_gate_hours_closed > 0 && (
-                      <p>🌙 Night Gate closed for {simResult.night_gate_hours_closed.toFixed(0)} hours</p>
+                      <p>
+                        🌙 Night Gate closed for{' '}
+                        {simResult.night_gate_hours_closed.toFixed(0)}
+                        {' '}hours
+                      </p>
                     )}
-                    <button className="primary-btn" onClick={runOptimize} disabled={optimizing}>
-                      {optimizing ? 'Optimizing...' : 'Optimize This Design →'}
+
+                    <button
+                      className="primary-btn"
+                      onClick={runOptimize}
+                      disabled={optimizing}
+                    >
+                      {optimizing
+                        ? 'Optimizing...'
+                        : 'Optimize This Design →'}
                     </button>
+
                   </div>
                 )}
               </>
@@ -124,30 +256,85 @@ function App() {
 
             {siteId && designMode === 'retrofit' && (
               <>
-                <button className="back-btn" onClick={() => setDesignMode(null)}>← Back</button>
-                <RetrofitForm defaultSiteId={siteId} designDay={designDay} onResult={setRetrofitResult} />
-                <RetrofitResults data={retrofitResult} />
+                <button
+                  className="back-btn"
+                  onClick={() => setDesignMode(null)}
+                >
+                  ← Back
+                </button>
+
+                <RetrofitForm
+                  defaultSiteId={siteId}
+                  designDay={designDay}
+                  onResult={setRetrofitResult}
+                />
+
+                <RetrofitResults
+                  data={retrofitResult}
+                />
               </>
             )}
+
           </div>
         )}
 
+        {/* ================= CLIMATE ================= */}
+
         {activeTab === 'climate' && (
-          <ClimateModule siteId={siteId || 'leh'} designDay={designDay} onScenarioChange={setDesignDay} />
+          <ClimateModule
+            siteId={siteId || 'leh'}
+            designDay={designDay}
+            onScenarioChange={setDesignDay}
+          />
         )}
 
-        {activeTab === 'materials' && <MaterialsModule />}
+        {/* ================= MATERIALS ================= */}
 
-{activeTab === 'twin' && <DigitalTwinModule simResult={simResult} />}
-        
+        {activeTab === 'materials' && (
+          <MaterialsModule />
+        )}
+
+        {/* ================= 3D DIGITAL TWIN ================= */}
+
+        {activeTab === 'twin' && (
+  <DigitalTwinModule
+    simResult={simResult}
+  />
+)}
+
+        {/* ================= OPTIMIZER ================= */}
 
         {activeTab === 'optimize' && (
-          <OptimizeModule data={optimizeResult} onExportCSV={exportOptimizeCSV} onExportPDF={exportOptimizePDF} />
+          <OptimizeModule
+            data={optimizeResult}
+            onExportCSV={exportOptimizeCSV}
+            onExportPDF={exportOptimizePDF}
+            onUseInSandbox={handleUseInSandbox}
+          />
         )}
 
-        {activeTab === 'benchmark' && <BenchmarkModule />}
+        {/* ================= SANDBOX ================= */}
 
-        {activeTab === 'telemetry' && <TelemetryModule siteId={siteId || 'leh'} />}
+        {activeTab === 'sandbox' && (
+          <SandboxModule
+            seed={sandboxSeed}
+          />
+        )}
+
+        {/* ================= ANSYS ================= */}
+
+        {activeTab === 'benchmark' && (
+          <BenchmarkModule />
+        )}
+
+        {/* ================= REAL-TIME TELEMETRY ================= */}
+
+        {activeTab === 'telemetry' && (
+          <TelemetryModule
+            siteId={siteId}
+          />
+        )}
+
       </div>
     </div>
   );

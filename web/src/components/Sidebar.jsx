@@ -6,6 +6,7 @@ const TABS = [
   { id: 'materials', label: 'Materials DB', icon: '🧱' },
   { id: 'twin', label: '3D Digital Twin', icon: '🧊' },
   { id: 'optimize', label: 'Multi-Objective', icon: '🔥' },
+  { id: 'sandbox', label: 'Bulk / Sandbox', icon: '🏘️' },
   { id: 'benchmark', label: 'ANSYS Benchmark', icon: '✅' },
   { id: 'telemetry', label: 'Real-Time Telemetry', icon: '📡' },
 ];

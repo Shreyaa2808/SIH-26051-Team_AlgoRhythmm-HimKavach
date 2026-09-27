@@ -14,6 +14,11 @@ export default function ConfigForm({ onResult, defaultSiteId, designDay }) {
     floor_area_m2: 16.0,
     ceiling_height_m: 2.4,
     night_gate_enabled: false,
+    orientation_deg: 0,
+    roof_slope_deg: 0,
+    window_wall: '',
+    window_area_m2: 0,
+    window_material_id: 'double_glazed_low_e_window',
   });
 
   useEffect(() => {
@@ -34,6 +39,7 @@ export default function ConfigForm({ onResult, defaultSiteId, designDay }) {
 
     const payload = {
       ...form,
+      window_wall: form.window_wall || null,
       design_day: designDay,
     };
 
@@ -47,8 +53,8 @@ export default function ConfigForm({ onResult, defaultSiteId, designDay }) {
         const detail = await res.json().catch(() => ({}));
         throw new Error(detail.detail || `Request failed: ${res.status}`);
       }
-           const data = await res.json();
-      onResult({ ...data, floor_area_m2: form.floor_area_m2, ceiling_height_m: form.ceiling_height_m });
+      const data = await res.json();
+      onResult(data);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -62,6 +68,7 @@ export default function ConfigForm({ onResult, defaultSiteId, designDay }) {
   const insulationMaterials = materials.filter(
     (m) => m.category === 'insulation'
   );
+  const glazingMaterials = materials.filter((m) => m.category === 'glazing');
 
   return (
     <form onSubmit={handleSubmit} className="config-form">
@@ -161,6 +168,77 @@ export default function ConfigForm({ onResult, defaultSiteId, designDay }) {
         />
         Enable Adaptive Night Gate (closes envelope at night, reopens by day)
       </label>
+
+      <h3 className="form-subhead">Orientation, roof &amp; windows (optional — defaults match a plain flat-roof, no-window box)</h3>
+
+      <label>
+        Building orientation (° from North, rotates the whole shelter)
+        <input
+          type="range"
+          min="0"
+          max="359"
+          step="5"
+          value={form.orientation_deg}
+          onChange={(e) => handleChange('orientation_deg', Number(e.target.value))}
+        />
+        <span className="range-readout">{form.orientation_deg}°</span>
+      </label>
+
+      <label>
+        Roof slope (° — 0 = flat)
+        <input
+          type="range"
+          min="0"
+          max="45"
+          step="1"
+          value={form.roof_slope_deg}
+          onChange={(e) => handleChange('roof_slope_deg', Number(e.target.value))}
+        />
+        <span className="range-readout">{form.roof_slope_deg}°</span>
+      </label>
+
+      <label>
+        Window wall
+        <select
+          value={form.window_wall}
+          onChange={(e) => handleChange('window_wall', e.target.value)}
+        >
+          <option value="">No window</option>
+          <option value="N">North wall</option>
+          <option value="E">East wall</option>
+          <option value="S">South wall (best solar gain, N. hemisphere)</option>
+          <option value="W">West wall</option>
+        </select>
+      </label>
+
+      {form.window_wall && (
+        <>
+          <label>
+            Window area (m²)
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={form.window_area_m2}
+              onChange={(e) => handleChange('window_area_m2', Number(e.target.value))}
+            />
+          </label>
+          <label>
+            Glazing type
+            <select
+              value={form.window_material_id}
+              onChange={(e) => handleChange('window_material_id', e.target.value)}
+            >
+              {glazingMaterials.length === 0 && (
+                <option value={form.window_material_id}>{form.window_material_id}</option>
+              )}
+              {glazingMaterials.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </label>
+        </>
+      )}
 
       <button type="submit" disabled={loading}>
         {loading ? 'Simulating...' : 'Simulate'}

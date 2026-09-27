@@ -282,17 +282,48 @@ def make_simple_box_geometry(
     ceiling_height_m: float,
     leakage_area_cm2: float = 200.0,
     night_gate: NightGateSchedule | None = None,
+    orientation_deg: float = 0.0,
+    roof_slope_deg: float = 0.0,
+    window_wall: str | None = None,
+    window_area_m2: float = 0.0,
+    window_material_id: str = "double_glazed_low_e_window",
 ) -> GeometrySpec:
     """
     Convenience builder: a simple rectangular single-room shelter (4 walls,
-    flat roof, ground floor), same wall+insulation construction on all
-    vertical surfaces and the roof, for quick testing / Phase 2 validation.
-    A real design tool (Phase 3/4) will vary constructions per surface.
+    roof, ground floor), same wall+insulation construction on all vertical
+    surfaces and the roof, for quick testing / Phase 2 validation.
+    A fully custom design tool would vary constructions per surface.
+
+    orientation_deg: rotates the whole box so "wall_N" faces this compass
+      bearing instead of true north (0-359.9). Every wall's azimuth_deg
+      shifts by the same amount, so the solar-gain calculation (which
+      already keys off each SurfaceSpec.azimuth_deg via
+      engine/solver/solar_geometry.py) sees a genuinely reoriented
+      building -- this is not a cosmetic label, it changes the physics.
+
+    roof_slope_deg: 0 = flat roof (unchanged default behaviour). >0 gives
+      a single-pitch roof: tilt_deg becomes roof_slope_deg (so it now also
+      gets a real solar-gain calculation instead of the flat-roof
+      approximation) and its area is inflated by 1/cos(slope) since a
+      pitched roof has more surface area than the flat footprint it covers
+      (real geometry, not a fudge factor).
+
+    window_wall / window_area_m2 / window_material_id: cuts a window out
+      of one named wall ("N"/"E"/"S"/"W", pre-rotation compass label) using
+      a REAL glazing material from materials.json (double_glazed_low_e_window
+      or triple_glazed_krypton_window, u-value ~1.1-1.4 / ~0.6-0.8 W/m2K
+      respectively, sourced cost+carbon figures already in the library) --
+      not an invented window model. The window becomes its own SurfaceSpec
+      at the same tilt/azimuth as its parent wall, so it automatically
+      gets correctly-oriented solar gain from the existing solar module.
+      window_area_m2 = 0 (default) reproduces the old no-window behaviour
+      exactly.
     """
     wall_mat = materials_lib.get(wall_material_id)
     ins_mat = materials_lib.get(insulation_material_id)
 
     side = math.sqrt(floor_area_m2)
+    wall_area_gross = side * ceiling_height_m
 
     def make_assembly(name: str) -> ConstructionAssembly:
         a = ConstructionAssembly(
@@ -305,17 +336,57 @@ def make_simple_box_geometry(
         a.build_nodes()
         return a
 
-    surfaces = [
-        SurfaceSpec("wall_N", side * ceiling_height_m, 90, 0, make_assembly("wall_N")),
-        SurfaceSpec("wall_E", side * ceiling_height_m, 90, 90, make_assembly("wall_E")),
-        SurfaceSpec("wall_S", side * ceiling_height_m, 90, 180, make_assembly("wall_S")),
-        SurfaceSpec("wall_W", side * ceiling_height_m, 90, 270, make_assembly("wall_W")),
-        SurfaceSpec("roof", floor_area_m2, 5, 180, make_assembly("roof")),
+    # base (pre-rotation) compass bearings, matching the original fixed layout
+    base_bearings = {"N": 0.0, "E": 90.0, "S": 180.0, "W": 270.0}
+    rotated_bearing = {
+        cardinal: (bearing + orientation_deg) % 360.0
+        for cardinal, bearing in base_bearings.items()
+    }
+
+    if window_wall is not None and window_wall not in base_bearings:
+        raise ValueError(f"window_wall must be one of {list(base_bearings)} or None, got {window_wall!r}")
+    if window_area_m2 < 0:
+        raise ValueError("window_area_m2 cannot be negative")
+    if window_wall is not None and window_area_m2 >= wall_area_gross:
+        raise ValueError(
+            f"window_area_m2 ({window_area_m2:.1f} m2) must be smaller than the "
+            f"wall's own area ({wall_area_gross:.1f} m2) it's cut into."
+        )
+
+    surfaces: list[SurfaceSpec] = []
+    for cardinal, base_bearing in base_bearings.items():
+        name = f"wall_{cardinal}"
+        area = wall_area_gross
+        if window_wall == cardinal and window_area_m2 > 0:
+            area -= window_area_m2
+        surfaces.append(
+            SurfaceSpec(name, area, 90, rotated_bearing[cardinal], make_assembly(name))
+        )
+
+    if window_wall is not None and window_area_m2 > 0:
+        window_mat = materials_lib.get(window_material_id)
+        window_assembly = ConstructionAssembly(
+            name="window",
+            layers=[Layer(material=window_mat, thickness_m=0.024, n_nodes=1)],
+        )
+        window_assembly.build_nodes()
+        surfaces.append(
+            SurfaceSpec(
+                "window", window_area_m2, 90, rotated_bearing[window_wall], window_assembly
+            )
+        )
+
+    roof_tilt = max(0.0, roof_slope_deg)
+    roof_area = floor_area_m2 / math.cos(math.radians(min(roof_tilt, 60.0))) if roof_tilt > 0 else floor_area_m2
+    surfaces.append(
+        SurfaceSpec("roof", roof_area, roof_tilt if roof_tilt > 0 else 5, 180, make_assembly("roof"))
+    )
+    surfaces.append(
         SurfaceSpec(
             "floor", floor_area_m2, 0, 0, make_assembly("floor"),
             is_ground_coupled=True, ground_temp_c=2.0,
-        ),
-    ]
+        )
+    )
 
     return GeometrySpec(
         surfaces=surfaces,
