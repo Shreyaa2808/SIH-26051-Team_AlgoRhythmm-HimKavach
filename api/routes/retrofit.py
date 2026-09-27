@@ -49,6 +49,7 @@ class BaselineOut(BaseModel):
     wall_u_value_wm2k: float
     safety_passed: bool
     safety_reasons: list[str]
+    carbon_kgco2e: float | None
 
 
 class RankedInterventionOut(BaseModel):
@@ -59,6 +60,7 @@ class RankedInterventionOut(BaseModel):
     added_cost_inr: float | None
     cost_per_degree_inr: float | None
     wall_u_value_wm2k: float
+    added_carbon_kgco2e: float | None
 
 
 class RejectedInterventionOut(BaseModel):
@@ -147,6 +149,7 @@ def retrofit_rank(req: RetrofitRankRequest) -> RetrofitRankResponse:
             wall_u_value_wm2k=baseline_out.wall_u_value_wm2k,
             safety_passed=baseline_out.safety_passed,
             safety_reasons=baseline_out.safety_reasons,
+            carbon_kgco2e=baseline_out.carbon_kgco2e,
         ),
         ranked_interventions=[
             RankedInterventionOut(
@@ -156,6 +159,7 @@ def retrofit_rank(req: RetrofitRankRequest) -> RetrofitRankResponse:
                 delta_comfort_c=r.delta_comfort_c,
                 added_cost_inr=None if r.added_cost_inr != r.added_cost_inr else r.added_cost_inr,
                 cost_per_degree_inr=r.cost_per_degree_inr,
+                added_carbon_kgco2e=r.added_carbon_kgco2e,
                 wall_u_value_wm2k=r.wall_u_value_wm2k,
             )
             for r in ranked

@@ -35,6 +35,7 @@ class BaselineResult:
     wall_u_value_wm2k: float
     safety_passed: bool
     safety_reasons: list[str]
+    carbon_kgco2e: float | None  # total embodied carbon of the EXISTING envelope; None if unknown
 
 
 @dataclass
@@ -46,6 +47,7 @@ class RankedIntervention:
     cost_per_degree_inr: float | None  # None if delta_comfort_c <= 0 (no benefit to divide by)
     wall_u_value_wm2k: float
     safety_passed: bool
+    added_carbon_kgco2e: float | None  # marginal carbon of the added material only; None if unknown
 
 
 @dataclass
@@ -61,6 +63,33 @@ def _material_cost(materials_lib: MaterialsLibrary, material_id: str | None, vol
     if mat.cost_per_m3_inr is None:
         return None
     return volume_m3 * mat.cost_per_m3_inr
+
+
+def _material_carbon(materials_lib: MaterialsLibrary, material_id: str | None, volume_m3: float) -> float | None:
+    """Marginal embodied carbon of the ADDED material only (mirrors
+    _material_cost's same simplification: a wall-swap's removed old
+    material isn't credited/subtracted, same as its cost isn't)."""
+    if material_id is None:
+        return None
+    mat = materials_lib.get(material_id)
+    carbon_per_kg = getattr(mat, "carbon_kgco2e_per_kg", None)
+    if carbon_per_kg is None:
+        return None
+    return volume_m3 * mat.rho * carbon_per_kg
+
+
+def _envelope_total_carbon(materials_lib: MaterialsLibrary, geometry) -> float | None:
+    """Total embodied carbon of a FULL envelope (all surfaces/layers) — used
+    for the baseline's own footprint, not a single intervention's marginal
+    add. None if any layer's material has no sourced carbon figure."""
+    total = 0.0
+    for surf in geometry.surfaces:
+        for layer in surf.assembly.layers:
+            carbon_per_kg = getattr(layer.material, "carbon_kgco2e_per_kg", None)
+            if carbon_per_kg is None:
+                return None
+            total += layer.thickness_m * surf.area_m2 * layer.material.rho * carbon_per_kg
+    return total
 
 
 def _run(
@@ -124,6 +153,7 @@ def rank_retrofit_interventions(
         wall_u_value_wm2k=base_geometry.surfaces[0].assembly.u_value(),
         safety_passed=base_result.safety.passed,
         safety_reasons=base_result.safety.reasons,
+        carbon_kgco2e=_envelope_total_carbon(materials_lib, base_geometry),
     )
 
     candidates, unavailable = generate_candidates(baseline, materials_lib)
@@ -151,6 +181,7 @@ def rank_retrofit_interventions(
             continue
 
         cost = _material_cost(materials_lib, cand.added_material_id, cand.added_volume_m3)
+        carbon = _material_carbon(materials_lib, cand.added_material_id, cand.added_volume_m3)
         delta = result.min_indoor_temp_c - baseline_out.comfort_coldest_hour_c
         cost_per_degree = None
         if cost is not None and delta > 0:
@@ -165,6 +196,7 @@ def rank_retrofit_interventions(
                 cost_per_degree_inr=cost_per_degree,
                 wall_u_value_wm2k=geometry.surfaces[0].assembly.u_value(),
                 safety_passed=True,
+                added_carbon_kgco2e=carbon,
             )
         )
 

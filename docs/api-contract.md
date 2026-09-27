@@ -231,11 +231,16 @@ form.
 Response:
 - `baseline`: the existing structure's own performance
   (`comfort_coldest_hour_c`, `wall_u_value_wm2k`, `safety_passed` +
-  `safety_reasons`) — show this first, as the "before" reference point.
+  `safety_reasons`, `carbon_kgco2e` — total embodied carbon of the
+  *existing* envelope, `null` if any of its materials lacks a sourced
+  carbon figure) — show this first, as the "before" reference point.
 - `ranked_interventions`: single-variable upgrades, each with `kind`,
   `label`, `comfort_coldest_hour_c` (after), `delta_comfort_c`,
   `added_cost_inr` (nullable — see below), `cost_per_degree_inr` (nullable),
-  `wall_u_value_wm2k`. Sorted best cost-per-degree first.
+  `wall_u_value_wm2k`, `added_carbon_kgco2e` (nullable — marginal carbon of
+  the material actually added/replaced, not a whole-envelope figure like
+  baseline's; `null` if that material has no sourced carbon factor).
+  Sorted best cost-per-degree first.
 - `rejected_interventions`: candidates that failed the safety interlock
   once applied — `kind` + `label` + `reason`. Show these separately, with
   the reason, not silently drop them.
