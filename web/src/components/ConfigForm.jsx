@@ -53,8 +53,8 @@ export default function ConfigForm({ onResult, defaultSiteId, designDay }) {
         const detail = await res.json().catch(() => ({}));
         throw new Error(detail.detail || `Request failed: ${res.status}`);
       }
-      const data = await res.json();
-      onResult(data);
+           const data = await res.json();
+      onResult({ ...data, floor_area_m2: form.floor_area_m2, ceiling_height_m: form.ceiling_height_m });
     } catch (err) {
       setError(err.message);
     } finally {

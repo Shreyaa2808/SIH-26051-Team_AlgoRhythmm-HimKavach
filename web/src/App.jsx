@@ -9,6 +9,8 @@ import ClimateModule from './components/ClimateModule';
 import MaterialsModule from './components/MaterialsModule';
 import OptimizeModule from './components/OptimizeModule';
 import BenchmarkModule from './components/BenchmarkModule';
+import TelemetryModule from './components/TelemetryModule';
+import DigitalTwinModule from './components/DigitalTwinModule';
 
 const SITE_LABELS = { leh: 'Leh (Capital)', siachen: 'Siachen', dras: 'Dras' };
 
@@ -134,15 +136,8 @@ function App() {
 
         {activeTab === 'materials' && <MaterialsModule />}
 
-        {activeTab === 'twin' && (
-          <div className="module-header">
-            <div>
-              <div className="eyebrow">Module 4 · 3D Parametric Digital Twin</div>
-              <h2>Interactive 3D Thermal Field</h2>
-              <p>Coming soon.</p>
-            </div>
-          </div>
-        )}
+{activeTab === 'twin' && <DigitalTwinModule simResult={simResult} />}
+        
 
         {activeTab === 'optimize' && (
           <OptimizeModule data={optimizeResult} onExportCSV={exportOptimizeCSV} onExportPDF={exportOptimizePDF} />
@@ -150,15 +145,7 @@ function App() {
 
         {activeTab === 'benchmark' && <BenchmarkModule />}
 
-        {activeTab === 'telemetry' && (
-          <div className="module-header">
-            <div>
-              <div className="eyebrow">Module 7 · Real-Time Telemetry</div>
-              <h2>Live Sensor Stream</h2>
-              <p>Coming soon.</p>
-            </div>
-          </div>
-        )}
+        {activeTab === 'telemetry' && <TelemetryModule siteId={siteId || 'leh'} />}
       </div>
     </div>
   );
