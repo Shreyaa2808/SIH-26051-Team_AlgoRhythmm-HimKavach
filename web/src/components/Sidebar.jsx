@@ -1,3 +1,5 @@
+import ClimateStatusBadge from './ClimateStatusBadge';
+
 const TABS = [
   { id: 'siting', label: 'Micro-Siting', icon: '📍' },
   { id: 'climate', label: 'Climate Engine', icon: '📈' },
@@ -15,15 +17,16 @@ export default function Sidebar({ active, onChange, unlockedTabs, siteLabel, sce
         <img src="/logo.jpeg" alt="HimKavach" className="sidebar-logo" />
       </div>
 
-      <div className="sidebar-status">
-        <div className="sidebar-status-row">
-          <span className="status-dot" />
-          Station: <strong>{siteLabel || '—'}</strong>
-        </div>
-        <div className="sidebar-status-row">
-          🗓️ <strong>{scenarioLabel || 'No scenario'}</strong>
-        </div>
-      </div>
+    <div className="sidebar-status">
+  <div className="sidebar-status-row">
+    <span className="status-dot" />
+    Station: <strong>{siteLabel || '—'}</strong>
+  </div>
+  <div className="sidebar-status-row">
+    🗓️ <strong>{scenarioLabel || 'No scenario'}</strong>
+  </div>
+  <ClimateStatusBadge />
+</div>
 
       <nav className="sidebar-nav">
         {TABS.map((t, i) => {
