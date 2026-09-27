@@ -67,3 +67,6 @@ app.include_router(benchmark_router)
 
 from api.routes.climate_status import router as climate_status_router
 app.include_router(climate_status_router)
+
+from api.routes.sandbox import router as sandbox_router
+app.include_router(sandbox_router)

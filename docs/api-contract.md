@@ -264,8 +264,58 @@ field yet.
 - Map click / GPS / place-name geocoding → still a fixed 3-site dropdown.
 - PDF/CSV export → no endpoint yet (Phase 4c, client-side or new endpoint,
   undecided — flag this when you get there, don't block on it now).
-- Bulk/sandbox multi-shelter layout → not implemented.
 - Live 24h dashboard summary cards (comfort-hours %, fuel-avoided, etc.) →
   `/simulate` returns the raw curve; compute these client-side from
   `hours`/`indoor_temp_c`/`outdoor_temp_c` for now, or flag if you want a
   server-side summary endpoint instead.
+
+## `POST /sandbox/layout` — bulk/sandbox multi-shelter layout (NEW)
+
+Roadmap section D, now implemented (`engine/sandbox/layout.py` +
+`api/routes/sandbox.py`). Read the module docstring in
+`engine/sandbox/layout.py` for the full list of what this deliberately
+does and doesn't model — short version below.
+
+**Not a second optimizer.** It takes ONE already-verified unit design (its
+`cost_inr` / `weight_kg` / `floor_area_m2` / `carbon_kgco2e` — copy these
+straight off a curated card from a prior `/optimize` response) and a
+settlement's `occupancy_total` + `budget_total_inr`, and answers "how many
+copies of this one design, and how are they laid out" — it does not
+re-search materials/thickness and does not mix different unit designs.
+
+Request:
+```json
+{
+  "unit_cost_inr": 45000,
+  "unit_weight_kg": 1200,
+  "unit_floor_area_m2": 16.0,
+  "unit_carbon_kgco2e": 850,
+  "occupancy_total": 50,
+  "budget_total_inr": 400000,
+  "occupancy_per_unit": 4,
+  "spacing_multiplier": 2.5
+}
+```
+`unit_carbon_kgco2e` is nullable (omit or send `null` if the source design's
+carbon figure was unknown) — `total_carbon_kgco2e` in the response follows
+suit and stays `null`, never `0`.
+`budget_total_inr: 0` is valid and means "size by occupancy only" — the
+response's `notes` will say so explicitly and `budget_remaining_inr`
+/`units_affordable_by_budget` are not meaningful in that case.
+
+Response gives `units_built` plus `binding_constraint`
+(`"occupancy" | "budget" | "both" | "none"`) so the frontend can show
+*why* that many units were chosen, `occupancy_shortfall` if budget capped
+the settlement below full occupancy, settlement-wide totals
+(`total_cost_inr`, `total_weight_kg`, `total_carbon_kgco2e`), and a grid
+(`grid_rows`/`grid_cols`/`positions_m` — a flat list of `[x, y]` meter
+offsets for each unit's center, spaced `spacing_m` apart). `notes` carries
+any caveats (budget shortfall, unknown carbon, etc.) as plain strings —
+render these, don't just drop them.
+
+**Spacing caveat (read before rendering this as a validated site plan):**
+`spacing_m` is `unit_footprint_side_m * spacing_multiplier`, a common
+rule-of-thumb for avoiding low-winter-sun shadowing — it is NOT computed
+from this project's own `engine/solver/solar_geometry.py` for the actual
+site/design-day sun angle yet. Show the grid as a rough sandbox sketch,
+not a certified shadow-free layout, until that follow-up is done.
