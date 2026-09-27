@@ -1,3 +1,4 @@
+
 """
 POST /simulate — the Phase 1 deliverable endpoint.
 
@@ -19,6 +20,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from data.climate.loader import ClimateSeries
+from engine.climate.design_days import resolve_design_day
 from engine.materials.loader import MaterialsLibrary
 from engine.solver.thermal_solver import (
     GeometrySpec,
@@ -44,6 +46,7 @@ SITE_COORDS = {
 class SimulateRequest(BaseModel):
     site_id: str = Field(..., description="one of: leh, siachen, dras")
     day_of_year: int = Field(15, ge=1, le=365, description="1-365, e.g. 15 = mid-January")
+    design_day: str | None = None
     wall_material_id: str = "local_stone_masonry"
     insulation_material_id: str = "expanded_polystyrene_eps"
     wall_thickness_m: float = 0.3
@@ -107,13 +110,23 @@ def run_simulation(req: SimulateRequest) -> SimulateResponse:
 
     climate = _load_climate_for_site(req.site_id)
 
+    # Resolve a named design-day scenario to the actual day_of_year
+    # using this site's real cached climate data.
+    if req.design_day is not None:
+        try:
+            day_of_year = resolve_design_day(climate, req.design_day)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        day_of_year = req.day_of_year
+
     # extract the 24 hours matching the requested day-of-year from the
     # cached year-long series
-    start_idx = (req.day_of_year - 1) * 24
+    start_idx = (day_of_year - 1) * 24
     if start_idx + 24 > len(climate.temp_c):
         raise HTTPException(
             status_code=400,
-            detail=f"day_of_year {req.day_of_year} out of range for cached climate data.",
+            detail=f"day_of_year {day_of_year} out of range for cached climate data.",
         )
     day = climate.hour_slice(start_idx, 24)
 
@@ -152,14 +165,14 @@ def run_simulation(req: SimulateRequest) -> SimulateResponse:
         ghi_wm2=day.ghi_wm2,
         wind_ms=day.wind_ms,
         lw_down_wm2=day.lw_down_wm2,
-        day_of_year=req.day_of_year,
+        day_of_year=day_of_year,
         internal_gains=gains,
         indoor_temp_initial_c=req.indoor_temp_initial_c,
     )
 
     return SimulateResponse(
         site_id=req.site_id,
-        day_of_year=req.day_of_year,
+        day_of_year=day_of_year,
         hours=result.hours,
         indoor_temp_c=result.indoor_temp_c,
         outdoor_temp_c=result.outdoor_temp_c,

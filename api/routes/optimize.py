@@ -1,3 +1,4 @@
+
 """
 POST /optimize — Phase 3 deliverable.
 
@@ -16,6 +17,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from api.routes.simulate import SITE_COORDS, _load_climate_for_site
+from engine.climate.design_days import resolve_design_day
 from engine.materials.loader import MaterialsLibrary
 from engine.optimizer.optimize import OptimizeConfig, run_new_build_optimization
 from engine.optimizer.search_space import FixedParams
@@ -28,6 +30,7 @@ _materials_lib = MaterialsLibrary()
 class OptimizeRequest(BaseModel):
     site_id: str = Field(..., description="one of: leh, siachen, dras")
     day_of_year: int = Field(15, ge=1, le=365)
+    design_day: str | None = None
     floor_area_m2: float = 16.0
     ceiling_height_m: float = 2.4
     sensible_heat_w: float = 200.0
@@ -73,11 +76,21 @@ def run_optimization(req: OptimizeRequest) -> OptimizeResponse:
     site = SiteSpec(lat_deg=coords["lat"], lon_deg=coords["lon"], elevation_m=coords["elevation_m"])
     climate = _load_climate_for_site(req.site_id)
 
-    start_idx = (req.day_of_year - 1) * 24
+    # Resolve a named design-day scenario to the actual day_of_year
+    # using this site's real cached climate data.
+    if req.design_day is not None:
+        try:
+            day_of_year = resolve_design_day(climate, req.design_day)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        day_of_year = req.day_of_year
+
+    start_idx = (day_of_year - 1) * 24
     if start_idx + 24 > len(climate.temp_c):
         raise HTTPException(
             status_code=400,
-            detail=f"day_of_year {req.day_of_year} out of range for cached climate data.",
+            detail=f"day_of_year {day_of_year} out of range for cached climate data.",
         )
     day = climate.hour_slice(start_idx, 24)
 
@@ -85,7 +98,7 @@ def run_optimization(req: OptimizeRequest) -> OptimizeResponse:
         floor_area_m2=req.floor_area_m2,
         ceiling_height_m=req.ceiling_height_m,
         site_id=req.site_id,
-        day_of_year=req.day_of_year,
+        day_of_year=day_of_year,
         sensible_heat_w=req.sensible_heat_w,
     )
 
@@ -130,4 +143,5 @@ def run_optimization(req: OptimizeRequest) -> OptimizeResponse:
         for rd in ranked
     ]
 
-    return OptimizeResponse(site_id=req.site_id, day_of_year=req.day_of_year, pareto_front=out)
+    return OptimizeResponse(site_id=req.site_id, day_of_year=day_of_year, pareto_front=out)
+

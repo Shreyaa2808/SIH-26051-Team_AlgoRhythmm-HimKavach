@@ -1,3 +1,4 @@
+
 """
 API entrypoint. Run with:
     uvicorn api.main:app --reload --port 8000
@@ -55,3 +56,6 @@ app.include_router(optimize_router)
 
 from api.routes.retrofit import router as retrofit_router
 app.include_router(retrofit_router)
+
+from api.routes.design_days import router as design_days_router
+app.include_router(design_days_router)

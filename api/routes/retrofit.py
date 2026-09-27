@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from api.routes.simulate import SITE_COORDS, _load_climate_for_site
+from engine.climate.design_days import resolve_design_day
 from engine.materials.loader import MaterialsLibrary
 from engine.retrofit.baseline import RetrofitBaseline
 from engine.retrofit.ranker import rank_retrofit_interventions
@@ -24,6 +25,7 @@ _materials_lib = MaterialsLibrary()
 class RetrofitRankRequest(BaseModel):
     site_id: str = Field(..., description="one of: leh, siachen, dras")
     day_of_year: int = Field(15, ge=1, le=365)
+    design_day: str | None = None
 
     floor_area_m2: float = Field(..., description="required — no default, this is an existing structure")
     ceiling_height_m: float = Field(..., description="required — no default")
@@ -54,8 +56,8 @@ class RankedInterventionOut(BaseModel):
     label: str
     comfort_coldest_hour_c: float
     delta_comfort_c: float
-    added_cost_inr: float | None  # null if the added material has no cost data
-    cost_per_degree_inr: float | None  # null if no improvement or cost unknown
+    added_cost_inr: float | None
+    cost_per_degree_inr: float | None
     wall_u_value_wm2k: float
 
 
@@ -88,10 +90,24 @@ def retrofit_rank(req: RetrofitRankRequest) -> RetrofitRankResponse:
             detail=f"Unknown site_id '{req.site_id}'. Valid: {list(SITE_COORDS)}",
         )
 
+    coords = SITE_COORDS[req.site_id]
+    site = SiteSpec(lat_deg=coords["lat"], lon_deg=coords["lon"], elevation_m=coords["elevation_m"])
+    climate = _load_climate_for_site(req.site_id)
+
+    # Resolve a named design-day scenario to the actual day_of_year
+    # using this site's real cached climate data.
+    if req.design_day is not None:
+        try:
+            day_of_year = resolve_design_day(climate, req.design_day)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        day_of_year = req.day_of_year
+
     try:
         baseline = RetrofitBaseline(
             site_id=req.site_id,
-            day_of_year=req.day_of_year,
+            day_of_year=day_of_year,
             floor_area_m2=req.floor_area_m2,
             ceiling_height_m=req.ceiling_height_m,
             leakage_area_cm2=req.leakage_area_cm2,
@@ -106,15 +122,11 @@ def retrofit_rank(req: RetrofitRankRequest) -> RetrofitRankResponse:
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    coords = SITE_COORDS[req.site_id]
-    site = SiteSpec(lat_deg=coords["lat"], lon_deg=coords["lon"], elevation_m=coords["elevation_m"])
-    climate = _load_climate_for_site(req.site_id)
-
-    start_idx = (req.day_of_year - 1) * 24
+    start_idx = (day_of_year - 1) * 24
     if start_idx + 24 > len(climate.temp_c):
         raise HTTPException(
             status_code=400,
-            detail=f"day_of_year {req.day_of_year} out of range for cached climate data.",
+            detail=f"day_of_year {day_of_year} out of range for cached climate data.",
         )
     day = climate.hour_slice(start_idx, 24)
 
@@ -129,7 +141,7 @@ def retrofit_rank(req: RetrofitRankRequest) -> RetrofitRankResponse:
 
     return RetrofitRankResponse(
         site_id=req.site_id,
-        day_of_year=req.day_of_year,
+        day_of_year=day_of_year,
         baseline=BaselineOut(
             comfort_coldest_hour_c=baseline_out.comfort_coldest_hour_c,
             wall_u_value_wm2k=baseline_out.wall_u_value_wm2k,
@@ -142,7 +154,7 @@ def retrofit_rank(req: RetrofitRankRequest) -> RetrofitRankResponse:
                 label=r.intervention.label,
                 comfort_coldest_hour_c=r.comfort_coldest_hour_c,
                 delta_comfort_c=r.delta_comfort_c,
-                added_cost_inr=None if r.added_cost_inr != r.added_cost_inr else r.added_cost_inr,  # NaN -> None
+                added_cost_inr=None if r.added_cost_inr != r.added_cost_inr else r.added_cost_inr,
                 cost_per_degree_inr=r.cost_per_degree_inr,
                 wall_u_value_wm2k=r.wall_u_value_wm2k,
             )
