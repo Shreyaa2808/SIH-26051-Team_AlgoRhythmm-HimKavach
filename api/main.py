@@ -59,3 +59,6 @@ app.include_router(retrofit_router)
 
 from api.routes.design_days import router as design_days_router
 app.include_router(design_days_router)
+
+from api.routes.benchmark import router as benchmark_router
+app.include_router(benchmark_router)

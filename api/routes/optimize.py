@@ -1,4 +1,3 @@
-
 """
 POST /optimize — Phase 3 deliverable.
 
@@ -20,6 +19,7 @@ from api.routes.simulate import SITE_COORDS, _load_climate_for_site
 from engine.climate.design_days import resolve_design_day
 from engine.materials.loader import MaterialsLibrary
 from engine.optimizer.optimize import OptimizeConfig, run_new_build_optimization
+from engine.optimizer.curated import curate_top_designs, paginate_remaining
 from engine.optimizer.search_space import FixedParams
 from engine.solver.thermal_solver import SiteSpec
 
@@ -39,6 +39,10 @@ class OptimizeRequest(BaseModel):
     use_surrogate: bool = True
     seed: int | None = 42
 
+    # Phase 3 "explore more" pagination
+    explore_offset: int = Field(0, ge=0)
+    explore_page_size: int = Field(6, ge=1, le=20)
+
 
 class RankedDesignOut(BaseModel):
     wall_material_id: str
@@ -54,13 +58,27 @@ class RankedDesignOut(BaseModel):
     safety_passed: bool
 
 
+class CuratedDesignOut(BaseModel):
+    label: str
+    why: str
+    design: RankedDesignOut
+
+
 class OptimizeResponse(BaseModel):
     site_id: str
     day_of_year: int
+    curated_designs: list[CuratedDesignOut]
+    explore_more: list[RankedDesignOut]
+    explore_has_more: bool
+    explore_next_offset: int
     pareto_front: list[RankedDesignOut]
     note: str = (
         "carbon_kgco2e is always null: no embodied-carbon data exists in "
-        "materials.json yet. Objectives actually optimized: comfort, cost, weight."
+        "materials.json yet. Objectives actually optimized: comfort, cost, weight. "
+        "curated_designs holds up to 5 labeled standout picks (Cheapest/Max "
+        "Performance/Lightest/Balanced); explore_more pages through the rest of "
+        "the front via explore_offset/explore_page_size. pareto_front is kept "
+        "for backward compatibility and always holds the full front."
     )
 
 
@@ -73,7 +91,11 @@ def run_optimization(req: OptimizeRequest) -> OptimizeResponse:
         )
 
     coords = SITE_COORDS[req.site_id]
-    site = SiteSpec(lat_deg=coords["lat"], lon_deg=coords["lon"], elevation_m=coords["elevation_m"])
+    site = SiteSpec(
+        lat_deg=coords["lat"],
+        lon_deg=coords["lon"],
+        elevation_m=coords["elevation_m"],
+    )
     climate = _load_climate_for_site(req.site_id)
 
     # Resolve a named design-day scenario to the actual day_of_year
@@ -87,11 +109,13 @@ def run_optimization(req: OptimizeRequest) -> OptimizeResponse:
         day_of_year = req.day_of_year
 
     start_idx = (day_of_year - 1) * 24
+
     if start_idx + 24 > len(climate.temp_c):
         raise HTTPException(
             status_code=400,
             detail=f"day_of_year {day_of_year} out of range for cached climate data.",
         )
+
     day = climate.hour_slice(start_idx, 24)
 
     fixed = FixedParams(
@@ -110,9 +134,13 @@ def run_optimization(req: OptimizeRequest) -> OptimizeResponse:
     )
 
     ranked = run_new_build_optimization(
-        _materials_lib, site, fixed,
-        outdoor_temp_c=day.temp_c, ghi_wm2=day.ghi_wm2,
-        wind_ms=day.wind_ms, lw_down_wm2=day.lw_down_wm2,
+        _materials_lib,
+        site,
+        fixed,
+        outdoor_temp_c=day.temp_c,
+        ghi_wm2=day.ghi_wm2,
+        wind_ms=day.wind_ms,
+        lw_down_wm2=day.lw_down_wm2,
         config=config,
     )
 
@@ -126,8 +154,8 @@ def run_optimization(req: OptimizeRequest) -> OptimizeResponse:
             ),
         )
 
-    out = [
-        RankedDesignOut(
+    def _to_out(rd) -> RankedDesignOut:
+        return RankedDesignOut(
             wall_material_id=rd.genome["wall_material_id"],
             insulation_material_id=rd.genome["insulation_material_id"],
             wall_thickness_m=rd.genome["wall_thickness_m"],
@@ -140,8 +168,31 @@ def run_optimization(req: OptimizeRequest) -> OptimizeResponse:
             wall_u_value_wm2k=rd.objectives.wall_u_value_wm2k,
             safety_passed=rd.objectives.safety_passed,
         )
-        for rd in ranked
-    ]
 
-    return OptimizeResponse(site_id=req.site_id, day_of_year=day_of_year, pareto_front=out)
+    curated = curate_top_designs(ranked)
 
+    explore_page, has_more = paginate_remaining(
+        ranked,
+        curated,
+        offset=req.explore_offset,
+        page_size=req.explore_page_size,
+    )
+
+    out = [_to_out(rd) for rd in ranked]
+
+    return OptimizeResponse(
+        site_id=req.site_id,
+        day_of_year=day_of_year,
+        curated_designs=[
+            CuratedDesignOut(
+                label=c.label,
+                why=c.why,
+                design=_to_out(c.design),
+            )
+            for c in curated
+        ],
+        explore_more=[_to_out(rd) for rd in explore_page],
+        explore_has_more=has_more,
+        explore_next_offset=req.explore_offset + req.explore_page_size,
+        pareto_front=out,
+    )

@@ -1,0 +1,57 @@
+{
+  "_readme": "Phase 2 ANSYS calibration harness input. Each entry describes ONE physical design (wall/insulation/geometry) that both our RC-network solver and a real ANSYS thermal run are evaluated against, for the SAME forcing (site + design-day). 'ansys_min_indoor_temp_c' and 'ansys_wall_clock_s' must come from an actual ANSYS run performed by the team -- they are NOT fabricated here. Until real numbers are filled in, 'status' stays 'pending' and engine/validation/ansys_benchmark.py will refuse to compute MAE/speedup for that entry (it will not silently substitute a placeholder). This keeps the same 'no invented numbers' discipline as validate_uvalue.py / validate_transient.py / materials.json's cost_note fields.",
+  "_how_to_fill_in": "1) Pick a design below (or add one). 2) Build the equivalent geometry in ANSYS Fluent/Thermal (or ANSYS Workbench Steady-State/Transient Thermal) using the SAME material k/rho/cp from data/materials/materials.json and the SAME hourly forcing (temp/GHI/wind) that engine/validation/ansys_benchmark.py prints for that entry. 3) Run it, record min indoor air temp over the 24h window and wall-clock solve time. 4) Fill ansys_min_indoor_temp_c / ansys_wall_clock_s / status:'complete' below. Only 2-3 runs are required for Phase 2 (calibration only, never inside the live optimizer loop -- see optimizer/surrogate.py docstring).",
+  "runs": [
+    {
+      "id": "leh_baseline_stone_eps",
+      "label": "Leh, coldest winter night, stone wall + EPS insulation",
+      "site_id": "leh",
+      "design_day": "coldest_winter_night",
+      "wall_material_id": "local_stone_masonry",
+      "insulation_material_id": "expanded_polystyrene_eps",
+      "wall_thickness_m": 0.3,
+      "insulation_thickness_m": 0.1,
+      "floor_area_m2": 16.0,
+      "ceiling_height_m": 2.4,
+      "leakage_area_cm2": 200.0,
+      "sensible_heat_w": 200.0,
+      "ansys_min_indoor_temp_c": null,
+      "ansys_wall_clock_s": null,
+      "status": "pending"
+    },
+    {
+      "id": "leh_hial_prefreb_equivalent",
+      "label": "Leh, typical winter day, HIAL-PreFreb-equivalent insulated wall",
+      "site_id": "leh",
+      "design_day": "typical_winter_day",
+      "wall_material_id": "local_stone_masonry",
+      "insulation_material_id": "mineral_wool",
+      "wall_thickness_m": 0.4,
+      "insulation_thickness_m": 0.08,
+      "floor_area_m2": 16.0,
+      "ceiling_height_m": 2.4,
+      "leakage_area_cm2": 150.0,
+      "sensible_heat_w": 200.0,
+      "ansys_min_indoor_temp_c": null,
+      "ansys_wall_clock_s": null,
+      "status": "pending"
+    },
+    {
+      "id": "siachen_lightweight_composite",
+      "label": "Siachen, sunniest winter day, lightweight rapid-deploy composite wall",
+      "site_id": "siachen",
+      "design_day": "sunniest_winter_day",
+      "wall_material_id": "expanded_polystyrene_eps",
+      "insulation_material_id": "polyurethane_foam_rigid",
+      "wall_thickness_m": 0.15,
+      "insulation_thickness_m": 0.12,
+      "floor_area_m2": 12.0,
+      "ceiling_height_m": 2.2,
+      "leakage_area_cm2": 120.0,
+      "sensible_heat_w": 250.0,
+      "ansys_min_indoor_temp_c": null,
+      "ansys_wall_clock_s": null,
+      "status": "pending"
+    }
+  ]
+}
