@@ -298,7 +298,7 @@ function App() {
 
         {activeTab === 'twin' && (
   <DigitalTwinModule
-    simResult={simResult}
+    siteId={siteId}
   />
 )}
 

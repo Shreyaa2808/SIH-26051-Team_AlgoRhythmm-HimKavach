@@ -75,5 +75,26 @@
     "elevation_m": 3759.0,
     "label": "Leh Khardung La Road, Chaktsal Gang, Leh, Leh district, Ladakh, 194101, India",
     "resolved_at": 1790515669.481073
+  },
+  "custom_33p285_76p289": {
+    "lat": 33.284619968887675,
+    "lon": 76.28906250000001,
+    "elevation_m": 4526.0,
+    "label": "Atholi (Paddar), Kishtwar, Jammu and Kashmir, India",
+    "resolved_at": 1790516480.888318
+  },
+  "custom_26p698_106p168": {
+    "lat": 26.69839,
+    "lon": 106.16844,
+    "elevation_m": 1225.0,
+    "label": "\u6d41\u957f\u4e61, \u8d35\u9633\u5e02, \u8d35\u5dde\u7701, \u4e2d\u56fd",
+    "resolved_at": 1790516806.615922
+  },
+  "custom_34p171_77p638": {
+    "lat": 34.1709,
+    "lon": 77.63764,
+    "elevation_m": 4350.0,
+    "label": "Saboo, Leh district, Ladakh, India",
+    "resolved_at": 1790517000.508663
   }
 }

@@ -60,6 +60,22 @@ class DesignRequest(BaseModel):
     indoor_temp_initial_c: float = -5.0
 
 
+class SurfaceThermal(BaseModel):
+    """One envelope surface's thermal performance — this is what the 3D
+    heat-map view (Phase C) colors each wall/roof face by. u_value and
+    area come straight from the same ConstructionAssembly/SurfaceSpec the
+    solver itself builds and runs against; heat_loss_w is U*A*deltaT using
+    the simulation's own mean indoor/outdoor temps, so nothing here is a
+    separate, possibly-inconsistent estimate."""
+    name: str                 # "wall_N", "wall_S", "window_N_0", "roof", "floor"
+    area_m2: float
+    u_value_wm2k: float
+    tilt_deg: float
+    azimuth_deg: float
+    heat_loss_w: float        # U * A * (mean_indoor - mean_outdoor), positive = losing heat
+    heat_flux_wm2: float      # heat_loss_w / area_m2, this is what drives the color gradient
+
+
 class DesignResponse(BaseModel):
     model: ShelterModel
     resolved_thicknesses: dict[str, float]
@@ -72,6 +88,7 @@ class DesignResponse(BaseModel):
     outdoor_temp_c: list[float]
     safety_passed: bool
     safety_reasons: list[str]
+    surfaces: list[SurfaceThermal]
 
 
 @router.post("/design", response_model=DesignResponse)
@@ -109,6 +126,19 @@ def auto_design(req: DesignRequest) -> DesignResponse:
         internal_gains=gains, indoor_temp_initial_c=req.indoor_temp_initial_c,
     )
 
+    mean_indoor_c = sum(result.indoor_temp_c) / len(result.indoor_temp_c)
+    mean_outdoor_c = sum(result.outdoor_temp_c) / len(result.outdoor_temp_c)
+    delta_t = mean_indoor_c - mean_outdoor_c
+    surfaces: list[SurfaceThermal] = []
+    for s in geometry.surfaces:
+        u = s.assembly.u_value()
+        heat_loss = u * s.area_m2 * delta_t
+        surfaces.append(SurfaceThermal(
+            name=s.name, area_m2=s.area_m2, u_value_wm2k=u,
+            tilt_deg=s.tilt_deg, azimuth_deg=s.azimuth_deg,
+            heat_loss_w=heat_loss, heat_flux_wm2=heat_loss / s.area_m2 if s.area_m2 else 0.0,
+        ))
+
     preset = model.occupancy.preset()
     response = DesignResponse(
         model=model,
@@ -122,6 +152,7 @@ def auto_design(req: DesignRequest) -> DesignResponse:
         outdoor_temp_c=result.outdoor_temp_c,
         safety_passed=result.safety.passed,
         safety_reasons=result.safety.reasons,
+        surfaces=surfaces,
     )
 
     # auto-persist: every /shelter/design call saves/updates the project,

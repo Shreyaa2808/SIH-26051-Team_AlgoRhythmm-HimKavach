@@ -1,0 +1,24 @@
+One-line change in web/src/App.jsx — DigitalTwinModule now looks up
+materials and runs its own /shelter/design calls, but still needs to know
+which site the person picked on the map/location tab, so pass it through:
+
+    Find (around line 299-302):
+
+        {activeTab === 'twin' && (
+          <DigitalTwinModule
+            simResult={simResult}
+          />
+        )}
+
+    Replace with:
+
+        {activeTab === 'twin' && (
+          <DigitalTwinModule
+            siteId={siteId}
+          />
+        )}
+
+`simResult` is no longer used by this component (Phase C replaced the old
+single-shared-config flow with the per-wall /shelter/design flow from
+Phase A), so it's fine to drop it here. Nothing else in App.jsx needs to
+change — `simResult` is still used elsewhere (climate chart, etc.).

@@ -1,0 +1,14 @@
+Cumulative api/main.py patch (Phase A + B). Same additive pattern as every
+existing router include already in the file — nothing else changes.
+
+1) Remove the old inline block (Phase B replaces it with a real CRUD router):
+       @app.get("/materials")
+       def list_materials():
+           ...
+
+2) Add, at the end of the file:
+       from api.routes.shelter import router as shelter_router
+       app.include_router(shelter_router)
+
+       from api.routes.materials import router as materials_router
+       app.include_router(materials_router)
