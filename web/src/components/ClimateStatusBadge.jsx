@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 
+import { API } from '../api';
 export default function ClimateStatusBadge() {
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch('http://localhost:8000/climate-status')
+    fetch(`${API}/climate-status`)
       .then((res) => {
         if (!res.ok) throw new Error('not ok');
         return res.json();

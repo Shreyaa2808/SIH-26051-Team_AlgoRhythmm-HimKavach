@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 
+import { API } from '../api';
 export default function ConfigForm({ onResult, defaultSiteId, designDay }) {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -22,7 +23,7 @@ export default function ConfigForm({ onResult, defaultSiteId, designDay }) {
   });
 
   useEffect(() => {
-    fetch('http://localhost:8000/materials')
+    fetch(`${API}/materials`)
       .then((res) => res.json())
       .then(setMaterials)
       .catch((err) => setError('Could not load materials: ' + err.message));
@@ -44,7 +45,7 @@ export default function ConfigForm({ onResult, defaultSiteId, designDay }) {
     };
 
     try {
-      const res = await fetch('http://localhost:8000/simulate', {
+      const res = await fetch(`${API}/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

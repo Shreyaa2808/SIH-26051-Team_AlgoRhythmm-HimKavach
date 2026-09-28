@@ -1,0 +1,15 @@
+{
+  "name": "himkavach-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline desktop shell for HimKavach",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12"
+  }
+}

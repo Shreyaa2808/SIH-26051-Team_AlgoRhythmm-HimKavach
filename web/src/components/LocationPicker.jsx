@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { API, IS_DESKTOP, IS_OFFLINE } from '../api';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -13,17 +14,15 @@ const markerIcon = new L.Icon({
   iconAnchor: [12, 41],
 });
 
-const API = 'http://localhost:8000';
-
 // Ladakh region, used only to center the initial map view -- not a
 // restriction on where the user can click. Any point on Earth resolves.
 const DEFAULT_CENTER = [34.15, 77.6];
 const DEFAULT_ZOOM = 8;
 
 const PRESETS = [
-  { id: 'leh', label: 'Leh', lat: 34.1526, lon: 77.5771 },
-  { id: 'siachen', label: 'Siachen', lat: 35.5, lon: 77.0 },
-  { id: 'dras', label: 'Dras', lat: 34.4333, lon: 75.7667 },
+  { id: 'leh', label: 'Leh', lat: 34.1526, lon: 77.5771, elevation_m: 3500 },
+  { id: 'siachen', label: 'Siachen', lat: 35.5, lon: 77.0, elevation_m: 5500 },
+  { id: 'dras', label: 'Dras', lat: 34.4333, lon: 75.7667, elevation_m: 3230 },
 ];
 
 function ClickCatcher({ onPick }) {
@@ -56,14 +55,15 @@ export default function LocationPicker({ onResolved }) {
   const [error, setError] = useState(null);
   const debounceRef = useRef(null);
 
-  const pickPoint = useCallback(async (lat, lon) => {
+  const pickPoint = useCallback(async (lat, lon, knownElevation = null) => {
     setMarker({ lat, lon });
     setLatInput(lat.toFixed(5));
     setLonInput(lon.toFixed(5));
-    setElevationPreview(null);
+    setElevationPreview(knownElevation);
     setError(null);
-    // Instant feedback: live elevation for the exact clicked point,
-    // fetched before the user commits (which also pulls climate data).
+
+    if (IS_OFFLINE && knownElevation == null) return;
+
     try {
       const res = await fetch(`${API}/location/elevation?lat=${lat}&lon=${lon}`);
       if (res.ok) {
@@ -71,7 +71,7 @@ export default function LocationPicker({ onResolved }) {
         setElevationPreview(data.elevation_m);
       }
     } catch {
-      // silent -- elevation preview is a nice-to-have, resolve() will retry
+      // Elevation preview is optional; confirmation performs the real check.
     }
   }, []);
 
@@ -103,6 +103,7 @@ export default function LocationPicker({ onResolved }) {
     setQuery(value);
     setSearchResults([]);
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (IS_OFFLINE) return;
     if (value.trim().length < 2) return;
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
@@ -123,7 +124,7 @@ export default function LocationPicker({ onResolved }) {
     pickPoint(r.lat, r.lon);
   };
 
-  const handlePreset = (p) => pickPoint(p.lat, p.lon);
+  const handlePreset = (p) => pickPoint(p.lat, p.lon, p.elevation_m);
 
   const handleConfirm = async () => {
     if (!marker) return;
@@ -136,7 +137,9 @@ export default function LocationPicker({ onResolved }) {
         body: JSON.stringify({
           lat: marker.lat,
           lon: marker.lon,
+          elevation_m: elevationPreview,
           area_m2: areaInput ? Number(areaInput) : null,
+          label: query || null,
         }),
       });
       if (!res.ok) {
@@ -156,31 +159,35 @@ export default function LocationPicker({ onResolved }) {
     <div className="location-picker">
       <h2>Select a Location</h2>
       <p className="form-note">
-        Click anywhere on the map, drop in coordinates, or search a place name.
-        Elevation and climate are fetched live for the exact point — nothing is
-        preset to a fixed list of sites.
+        {IS_DESKTOP
+          ? 'Offline desktop mode: bundled climate data is available for Leh, Siachen and Dras. Previously cached custom sites can also be reopened.'
+          : 'Click anywhere on the map, drop in coordinates, or search a place name. Elevation and climate are fetched live for the exact point and cached locally.'}
       </p>
 
-      <div className="location-search-row">
-        <input
-          type="text"
-          placeholder="Search a place (e.g. Nubra Valley, Kargil...)"
-          value={query}
-          onChange={(e) => handleSearchChange(e.target.value)}
-        />
-        <button type="button" onClick={handleUseMyLocation} className="secondary-btn">
-          📍 Use my location
-        </button>
-      </div>
-      {searching && <p className="form-note">Searching…</p>}
-      {searchResults.length > 0 && (
-        <ul className="location-search-results">
-          {searchResults.map((r, i) => (
-            <li key={i} onClick={() => handlePickSearchResult(r)}>
-              {r.label}
-            </li>
-          ))}
-        </ul>
+      {!IS_OFFLINE && (
+        <>
+          <div className="location-search-row">
+            <input
+              type="text"
+              placeholder="Search a place (e.g. Nubra Valley, Kargil...)"
+              value={query}
+              onChange={(e) => handleSearchChange(e.target.value)}
+            />
+            <button type="button" onClick={handleUseMyLocation} className="secondary-btn">
+              📍 Use my location
+            </button>
+          </div>
+          {searching && <p className="form-note">Searching…</p>}
+          {searchResults.length > 0 && (
+            <ul className="location-search-results">
+              {searchResults.map((r, i) => (
+                <li key={i} onClick={() => handlePickSearchResult(r)}>
+                  {r.label}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
 
       <div className="preset-chip-row">
@@ -191,7 +198,7 @@ export default function LocationPicker({ onResolved }) {
         ))}
       </div>
 
-      <div className="location-map-wrap">
+      {!IS_OFFLINE && <div className="location-map-wrap">
         <MapContainer
           center={DEFAULT_CENTER}
           zoom={DEFAULT_ZOOM}
@@ -210,7 +217,7 @@ export default function LocationPicker({ onResolved }) {
             </>
           )}
         </MapContainer>
-      </div>
+      </div>}
 
       <form className="config-form" onSubmit={handleCoordSubmit} style={{ marginTop: '1rem' }}>
         <div className="coord-input-row">
@@ -263,7 +270,7 @@ export default function LocationPicker({ onResolved }) {
             <div className="stat-value">
               {elevationPreview !== null ? `${elevationPreview.toFixed(0)} m` : '…'}
             </div>
-            <div className="stat-note">Live lookup for this exact point</div>
+            <div className="stat-note">{IS_OFFLINE ? "Bundled / cached data" : "Live lookup for this exact point"}</div>
           </div>
         </div>
       )}
@@ -277,7 +284,7 @@ export default function LocationPicker({ onResolved }) {
         onClick={handleConfirm}
         style={{ marginTop: '1rem' }}
       >
-        {resolving ? 'Fetching live climate for this site…' : 'Confirm location →'}
+        {resolving ? 'Loading climate data…' : IS_OFFLINE ? 'Use offline site →' : 'Confirm location →'}
       </button>
     </div>
   );

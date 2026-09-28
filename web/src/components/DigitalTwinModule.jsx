@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 
+import { API } from '../api';
 const CARDINALS = ['N', 'E', 'S', 'W'];
 
 const PURPOSES = [
@@ -514,7 +515,7 @@ export default function DigitalTwinModule({
 
   useEffect(() => {
     fetch(
-      'http://localhost:8000/materials'
+      `${API}/materials`
     )
       .then((response) =>
         response.json()
@@ -631,7 +632,7 @@ export default function DigitalTwinModule({
 
     try {
       const response = await fetch(
-        'http://localhost:8000/shelter/design',
+        `${API}/shelter/design`,
         {
           method: 'POST',
           headers: {

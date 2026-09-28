@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 
+import { API } from '../api';
 export default function BenchmarkModule() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:8000/validation/ansys-benchmark')
+    fetch(`${API}/validation/ansys-benchmark`)
       .then(async (res) => {
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));

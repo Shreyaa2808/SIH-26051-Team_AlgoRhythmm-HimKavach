@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API } from './api';
 import Sidebar from './components/Sidebar';
 import LocationPicker from './components/LocationPicker';
 import ConfigForm from './components/ConfigForm';
@@ -69,7 +70,7 @@ function App() {
     setOptimizeError(null);
 
     try {
-      const res = await fetch('http://localhost:8000/optimize', {
+      const res = await fetch(`${API}/optimize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -116,7 +117,7 @@ function App() {
     setInstantiateError(null);
 
     try {
-      const res = await fetch('http://localhost:8000/optimize/instantiate', {
+      const res = await fetch(`${API}/optimize/instantiate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

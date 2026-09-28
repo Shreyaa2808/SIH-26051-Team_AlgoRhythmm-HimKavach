@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import TemperatureChart from './TemperatureChart';
 import DesignDayPicker from './DesignDayPicker';
 
+import { API } from '../api';
 export default function ClimateModule({ siteId, designDay, onScenarioChange, onPickLocation }) {
   const requestKey = siteId && designDay ? `${siteId}|${designDay}` : null;
   const [result, setResult] = useState({ key: null, preview: null, error: null });
@@ -11,7 +12,7 @@ export default function ClimateModule({ siteId, designDay, onScenarioChange, onP
     // Ignore a response that lands after the station/scenario has changed,
     // otherwise a slow request for the old station can overwrite the new one.
     let cancelled = false;
-    fetch('http://localhost:8000/simulate', {
+    fetch(`${API}/simulate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ site_id: siteId, design_day: designDay }),

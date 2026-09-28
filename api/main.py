@@ -12,8 +12,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
+    # The desktop shell serves the Vite build from file://, whose browser
+    # origin is "null". The API is bound only to localhost by the desktop
+    # launcher, so wildcard CORS does not expose it to the LAN.
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

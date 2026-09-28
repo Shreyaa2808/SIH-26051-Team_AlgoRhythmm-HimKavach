@@ -4,3 +4,17 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+
+# Phase F - generated desktop build files
+desktop/node_modules/
+desktop/backend-dist/
+desktop/pyinstaller-work/
+desktop/release/
+desktop/build/
+
+# Frontend build output
+web/dist/
+
+# Python generated files
+__pycache__/
+*.pyc

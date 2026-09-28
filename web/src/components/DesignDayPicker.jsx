@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 
+import { API } from '../api';
 export default function DesignDayPicker({ value, onChange }) {
   const [scenarios, setScenarios] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:8000/design-day-scenarios')
+    fetch(`${API}/design-day-scenarios`)
       .then((res) => res.json())
       .then(setScenarios)
       .catch(() => setScenarios([])); // falls back to empty; caller should handle

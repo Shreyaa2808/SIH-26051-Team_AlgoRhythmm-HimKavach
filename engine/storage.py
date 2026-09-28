@@ -11,7 +11,9 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
-DB_PATH = Path(__file__).resolve().parent.parent / "data" / "app_state.sqlite3"
+from engine.runtime_paths import PROJECTS_DB
+
+DB_PATH = PROJECTS_DB
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS projects (

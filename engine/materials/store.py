@@ -24,8 +24,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-DB_PATH = Path(__file__).resolve().parents[2] / "data" / "materials" / "materials.sqlite3"
-SEED_JSON_PATH = Path(__file__).resolve().parents[2] / "data" / "materials" / "materials.json"
+from engine.runtime_paths import BUNDLED_MATERIALS_JSON, MATERIALS_DIR
+
+DB_PATH = MATERIALS_DIR / "materials.sqlite3"
+SEED_JSON_PATH = BUNDLED_MATERIALS_JSON
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS materials (
