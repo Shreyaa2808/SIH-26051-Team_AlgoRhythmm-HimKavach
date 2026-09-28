@@ -10,13 +10,28 @@ const VIEW_LABEL = {
   section: 'Section A-A',
 };
 
-export default function BlueprintModule() {
+export default function BlueprintModule({ initialProjectId = null }) {
   const [projects, setProjects] = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
+  const [requestedId, setRequestedId] = useState(null);
   const [views, setViews] = useState(null);
   const [activeView, setActiveView] = useState('plan');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [handledInitialId, setHandledInitialId] = useState(null);
+
+  const startLoading = (projectId) => {
+    setRequestedId(projectId);
+    setViews(null);
+    setError(null);
+    setLoading(true);
+  };
+
+  // Phase E: a design opened from the optimizer tab loads straight away
+  // (render-phase adjustment, React's pattern for "prop changed").
+  if (initialProjectId && initialProjectId !== handledInitialId) {
+    setHandledInitialId(initialProjectId);
+    startLoading(initialProjectId);
+  }
 
   useEffect(() => {
     fetch('http://localhost:8000/shelter/projects')
@@ -25,39 +40,44 @@ export default function BlueprintModule() {
       .catch((err) => setError('Could not load saved projects: ' + err.message));
   }, []);
 
-  const loadPreview = async (projectId) => {
-    setSelectedId(projectId);
-    setViews(null);
-    setError(null);
-    setLoading(true);
+  useEffect(() => {
+    if (!requestedId) return undefined;
+    let cancelled = false;
 
-    try {
-      const projRes = await fetch(`http://localhost:8000/shelter/projects/${projectId}`);
-      if (!projRes.ok) throw new Error(`project fetch failed (${projRes.status})`);
-      const proj = await projRes.json();
+    (async () => {
+      try {
+        const projRes = await fetch(`http://localhost:8000/shelter/projects/${requestedId}`);
+        if (!projRes.ok) throw new Error(`project fetch failed (${projRes.status})`);
+        const proj = await projRes.json();
 
-      const previewRes = await fetch('http://localhost:8000/blueprint/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: proj.model,
-          resolved_thicknesses: proj.last_sim?.resolved_thicknesses || {},
-        }),
-      });
-      if (!previewRes.ok) throw new Error(`blueprint preview failed (${previewRes.status})`);
-      const data = await previewRes.json();
-      setViews(data.views);
-      setActiveView('plan');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const previewRes = await fetch('http://localhost:8000/blueprint/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: proj.model,
+            resolved_thicknesses: proj.last_sim?.resolved_thicknesses || {},
+          }),
+        });
+        if (!previewRes.ok) throw new Error(`blueprint preview failed (${previewRes.status})`);
+        const data = await previewRes.json();
+        if (cancelled) return;
+        setViews(data.views);
+        setActiveView('plan');
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requestedId]);
 
   const downloadPdf = () => {
-    if (!selectedId) return;
-    window.open(`http://localhost:8000/blueprint/projects/${selectedId}/pdf`, '_blank');
+    if (!requestedId) return;
+    window.open(`http://localhost:8000/blueprint/projects/${requestedId}/pdf`, '_blank');
   };
 
   return (
@@ -79,8 +99,8 @@ export default function BlueprintModule() {
         <div className="project-picker">
           <label>Select a saved design: </label>
           <select
-            value={selectedId || ''}
-            onChange={(e) => e.target.value && loadPreview(e.target.value)}
+            value={requestedId || ''}
+            onChange={(e) => e.target.value && startLoading(e.target.value)}
           >
             <option value="" disabled>
               — choose a project —

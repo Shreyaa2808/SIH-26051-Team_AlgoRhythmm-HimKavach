@@ -29,6 +29,19 @@ function App() {
   const [optimizing, setOptimizing] = useState(false);
   const [sandboxSeed, setSandboxSeed] = useState(null);
 
+  // Phase E: optimizer <-> 3D twin <-> blueprint wiring
+  const [optimizeError, setOptimizeError] = useState(null);
+  const [optimizeOptions, setOptimizeOptions] = useState({
+    optimizeRoofSlope: true,
+    optimizeCeilingHeight: false,
+    groundSnowKpa: '0',
+    maxSnowKpa: ''
+  });
+  const [instantiating, setInstantiating] = useState(false);
+  const [instantiateError, setInstantiateError] = useState(null);
+  const [twinSeed, setTwinSeed] = useState(null);
+  const [blueprintProjectId, setBlueprintProjectId] = useState(null);
+
   const unlockedTabs = [
     'siting',
     'climate',
@@ -41,8 +54,19 @@ function App() {
     'blueprint'
   ];
 
+  const errorText = (body, status) => {
+    const d = body?.detail;
+    if (typeof d === 'string') return d;
+    if (d) return JSON.stringify(d);
+    return `Request failed: ${status}`;
+  };
+
   const runOptimize = async () => {
+    const site = simResult?.site_id ?? siteId;
+    if (!site) return;
+
     setOptimizing(true);
+    setOptimizeError(null);
 
     try {
       const res = await fetch('http://localhost:8000/optimize', {
@@ -51,25 +75,99 @@ function App() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          site_id: simResult.site_id,
-          design_day: designDay
+          site_id: site,
+          design_day: designDay,
+          optimize_roof_slope: optimizeOptions.optimizeRoofSlope,
+          optimize_ceiling_height: optimizeOptions.optimizeCeilingHeight,
+          ground_snow_load_kpa: Number(optimizeOptions.groundSnowKpa) || 0,
+          max_roof_snow_load_kpa:
+            optimizeOptions.maxSnowKpa === ''
+              ? null
+              : Number(optimizeOptions.maxSnowKpa)
         })
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(errorText(data, res.status));
+      }
 
       setOptimizeResult(data);
-      setActiveTab('optimize');
+      setInstantiateError(null);
     } catch (err) {
       console.error(err);
+      setOptimizeResult(null);
+      setOptimizeError(err.message);
     } finally {
       setOptimizing(false);
+      setActiveTab('optimize');
+    }
+  };
+
+  // Phase E: turn one Pareto point into a saved ShelterModel and open it
+  // in the 3D twin or the blueprint tab.
+  const openDesign = async (design, target, label) => {
+    if (!optimizeResult) return;
+
+    const ctx = optimizeResult.context ?? {};
+
+    setInstantiating(true);
+    setInstantiateError(null);
+
+    try {
+      const res = await fetch('http://localhost:8000/optimize/instantiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          site_id: optimizeResult.site_id,
+          day_of_year: optimizeResult.day_of_year,
+          design,
+          floor_area_m2: ctx.floor_area_m2 ?? 16,
+          ceiling_height_m: ctx.ceiling_height_m ?? 2.4,
+          roof_slope_deg: ctx.roof_slope_deg ?? 0,
+          sensible_heat_w: ctx.sensible_heat_w ?? 200,
+          ground_snow_load_kpa: ctx.ground_snow_load_kpa ?? 0,
+          name: `Optimizer · ${label}`
+        })
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(errorText(data, res.status));
+      }
+
+      if (target === 'blueprint') {
+        setBlueprintProjectId(data.project_id);
+        setActiveTab('blueprint');
+      } else {
+        setTwinSeed({
+          nonce: data.project_id,
+          design: data.design,
+          dayOfYear: optimizeResult.day_of_year,
+          label,
+          optimizerComfortC: data.optimizer_comfort_c,
+          comfortDeltaC: data.comfort_delta_c,
+          reproducesOptimizer: data.reproduces_optimizer,
+          roofSnowLoadKpa: data.roof_snow_load_kpa
+        });
+        setActiveTab('twin');
+      }
+    } catch (err) {
+      console.error(err);
+      setInstantiateError(err.message);
+    } finally {
+      setInstantiating(false);
     }
   };
 
   const handleNewSimResult = (data) => {
     setSimResult(data);
     setOptimizeResult(null);
+    setOptimizeError(null);
   };
 
   const exportOptimizeCSV = () => {
@@ -155,6 +253,9 @@ function App() {
                     setSimResult(null);
                     setRetrofitResult(null);
                     setOptimizeResult(null);
+                    setOptimizeError(null);
+                    setTwinSeed(null);
+                    setBlueprintProjectId(null);
                   }}
                 >
                   ← Change location
@@ -243,7 +344,7 @@ function App() {
 
                     <button
                       className="primary-btn"
-                      onClick={runOptimize}
+                      onClick={() => runOptimize()}
                       disabled={optimizing}
                     >
                       {optimizing
@@ -284,9 +385,10 @@ function App() {
 
         {activeTab === 'climate' && (
           <ClimateModule
-            siteId={siteId || 'leh'}
+            siteId={siteId}
             designDay={designDay}
             onScenarioChange={setDesignDay}
+            onPickLocation={() => setActiveTab('siting')}
           />
         )}
 
@@ -301,6 +403,7 @@ function App() {
         {activeTab === 'twin' && (
   <DigitalTwinModule
     siteId={siteId}
+    seed={twinSeed}
   />
 )}
 
@@ -309,9 +412,18 @@ function App() {
         {activeTab === 'optimize' && (
           <OptimizeModule
             data={optimizeResult}
+            error={optimizeError}
+            running={optimizing}
+            canRun={Boolean(simResult?.site_id ?? siteId)}
+            options={optimizeOptions}
+            onOptionsChange={setOptimizeOptions}
+            onRerun={() => runOptimize()}
             onExportCSV={exportOptimizeCSV}
             onExportPDF={exportOptimizePDF}
             onUseInSandbox={handleUseInSandbox}
+            onOpenDesign={openDesign}
+            instantiating={instantiating}
+            instantiateError={instantiateError}
           />
         )}
 
@@ -340,7 +452,9 @@ function App() {
         {/* ================= BLUEPRINT OUTPUT ================= */}
 
         {activeTab === 'blueprint' && (
-          <BlueprintModule />
+          <BlueprintModule
+            initialProjectId={blueprintProjectId}
+          />
         )}
 
       </div>

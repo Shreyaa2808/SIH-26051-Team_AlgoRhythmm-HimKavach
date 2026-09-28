@@ -413,6 +413,7 @@ function MetricCard({
 
 export default function DigitalTwinModule({
   siteId,
+  seed = null,
 }) {
   const [materials, setMaterials] =
     useState([]);
@@ -460,6 +461,56 @@ export default function DigitalTwinModule({
 
   const [showConfig, setShowConfig] =
     useState(true);
+
+  // Phase E: fields the optimizer sets that this form has no controls for.
+  // They must ride along on every regenerate, otherwise "Generate design"
+  // would silently swap the optimizer's floor / leakage for the defaults and
+  // the numbers would stop matching the Pareto point.
+  const [extras, setExtras] =
+    useState(null);
+
+  const [dayOfYear, setDayOfYear] =
+    useState(15);
+
+  const [appliedSeedNonce, setAppliedSeedNonce] =
+    useState(null);
+
+  const [seedInfo, setSeedInfo] =
+    useState(null);
+
+  // Phase E: open a design that came from the optimizer (or any saved
+  // ShelterModel). Adjusting state during render is React's documented
+  // pattern for "reset state when a prop changes" and avoids an effect.
+  if (seed && seed.nonce !== appliedSeedNonce) {
+    const m = seed.design.model;
+
+    setAppliedSeedNonce(seed.nonce);
+    setDims({
+      length_m: m.length_m,
+      width_m: m.width_m,
+      ceiling_height_m: m.ceiling_height_m,
+    });
+    setOrientationDeg(m.orientation_deg);
+    setPurpose(m.occupancy.purpose);
+    setWalls(m.walls);
+    setRoof(m.roof);
+    setExtras({
+      floor: m.floor,
+      leakage_area_cm2: m.leakage_area_cm2,
+    });
+    setDayOfYear(seed.dayOfYear ?? 15);
+    setDesign(seed.design);
+    setSeedInfo({
+      label: seed.label,
+      optimizerComfortC: seed.optimizerComfortC,
+      deltaC: seed.comfortDeltaC,
+      reproduces: seed.reproducesOptimizer,
+      slopeDeg: m.roof.slope_deg,
+      heightM: m.ceiling_height_m,
+      snowKpa: seed.roofSnowLoadKpa,
+    });
+    setError(null);
+  }
 
   useEffect(() => {
     fetch(
@@ -571,9 +622,11 @@ export default function DigitalTwinModule({
         walls,
 
         roof,
+
+        ...(extras || {}),
       },
 
-      day_of_year: 15,
+      day_of_year: dayOfYear,
     };
 
     try {
@@ -850,6 +903,47 @@ export default function DigitalTwinModule({
             : 'Show Design Controls'}
         </button>
       </div>
+
+      {/* OPTIMIZER PROVENANCE (Phase E) */}
+
+      {seedInfo && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '12px 16px',
+            borderRadius: 12,
+            background: '#eef4ff',
+            border: '1px solid #cfe0ff',
+            color: '#24406f',
+            fontSize: 13,
+            lineHeight: 1.5,
+          }}
+        >
+          <strong>
+            Loaded from optimizer
+            {seedInfo.label
+              ? ` — ${seedInfo.label}`
+              : ''}
+            .
+          </strong>{' '}
+          Roof slope{' '}
+          {seedInfo.slopeDeg.toFixed(0)}°,
+          ceiling{' '}
+          {seedInfo.heightM.toFixed(2)} m
+          {seedInfo.snowKpa != null &&
+          seedInfo.snowKpa > 0
+            ? `, roof snow load ${seedInfo.snowKpa.toFixed(2)} kPa`
+            : ''}
+          .{' '}
+          {seedInfo.reproduces === true &&
+            `Re-simulated coldest hour matches the optimizer (${seedInfo.optimizerComfortC.toFixed(1)}°C).`}
+          {seedInfo.reproduces === false &&
+            `Re-simulated coldest hour differs from the optimizer by ${seedInfo.deltaC.toFixed(2)}°C.`}
+          {' '}The optimizer's design has
+          no windows — add some below and
+          regenerate to see the trade-off.
+        </div>
+      )}
 
       {/* CONFIGURATION */}
 

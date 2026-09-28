@@ -2,15 +2,15 @@ import { useState, useEffect } from 'react';
 import TemperatureChart from './TemperatureChart';
 import DesignDayPicker from './DesignDayPicker';
 
-export default function ClimateModule({ siteId, designDay, onScenarioChange }) {
-  const [preview, setPreview] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+export default function ClimateModule({ siteId, designDay, onScenarioChange, onPickLocation }) {
+  const requestKey = siteId && designDay ? `${siteId}|${designDay}` : null;
+  const [result, setResult] = useState({ key: null, preview: null, error: null });
 
   useEffect(() => {
-    if (!siteId || !designDay) return;
-    setLoading(true);
-    setError(null);
+    if (!requestKey) return undefined;
+    // Ignore a response that lands after the station/scenario has changed,
+    // otherwise a slow request for the old station can overwrite the new one.
+    let cancelled = false;
     fetch('http://localhost:8000/simulate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -20,10 +20,43 @@ export default function ClimateModule({ siteId, designDay, onScenarioChange }) {
         if (!res.ok) throw new Error(`Request failed: ${res.status}`);
         return res.json();
       })
-      .then(setPreview)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [siteId, designDay]);
+      .then((data) => {
+        if (!cancelled) setResult({ key: requestKey, preview: data, error: null });
+      })
+      .catch((err) => {
+        if (!cancelled) setResult({ key: requestKey, preview: null, error: err.message });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [requestKey, siteId, designDay]);
+
+  // only trust a result that belongs to the station/scenario on screen now
+  const current = result.key === requestKey ? result : null;
+  const preview = current?.preview ?? null;
+  const error = current?.error ?? null;
+  const loading = Boolean(requestKey) && !current;
+
+  // No station selected yet: say so instead of silently showing another
+  // station's curve (this used to fall back to Leh).
+  if (!siteId) {
+    return (
+      <div>
+        <div className="module-header">
+          <div>
+            <div className="eyebrow">Module 2 · Climate Intelligence Engine</div>
+            <h2>High-Altitude Meteorological Time-Series</h2>
+            <p>Pick a location first — the 24-hour curve is shown for the station you select.</p>
+          </div>
+        </div>
+        {onPickLocation && (
+          <button className="primary-btn" onClick={onPickLocation}>
+            Choose a location →
+          </button>
+        )}
+      </div>
+    );
+  }
 
   const minAmbient = preview ? Math.min(...preview.outdoor_temp_c).toFixed(0) : '—';
   const peakAmbient = preview ? Math.max(...preview.outdoor_temp_c).toFixed(0) : '—';
@@ -37,7 +70,10 @@ export default function ClimateModule({ siteId, designDay, onScenarioChange }) {
         <div>
           <div className="eyebrow">Module 2 · Climate Intelligence Engine</div>
           <h2>High-Altitude Meteorological Time-Series</h2>
-          <p>Grounded in real NASA POWER climate data, cached locally per site.</p>
+          <p>
+            24-hour curve for the selected station ({siteId}), grounded in real NASA POWER
+            climate data cached locally per site.
+          </p>
         </div>
       </div>
 

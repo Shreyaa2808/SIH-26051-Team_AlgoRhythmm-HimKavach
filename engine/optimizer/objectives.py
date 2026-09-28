@@ -46,6 +46,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from engine.materials.loader import MaterialsLibrary
+from engine.optimizer.search_space import height_of, slope_of
+from engine.optimizer.snow import roof_snow_load_kpa, snow_violation_reason
 from engine.solver.thermal_solver import (
     GeometrySpec,
     InternalGains,
@@ -64,6 +66,11 @@ class ObjectiveResult:
     safety_passed: bool
     safety_reasons: list[str]
     wall_u_value_wm2k: float
+    # Phase E: what roof slope / height this evaluation actually used, and
+    # the resulting roof snow load. Defaults keep older constructors valid.
+    roof_slope_deg: float = 0.0
+    ceiling_height_m: float = 0.0
+    roof_snow_load_kpa: float = 0.0
 
     def as_vector(self) -> tuple[float, float, float]:
         """(comfort, cost, weight) with sign flipped so ALL are minimize."""
@@ -108,6 +115,9 @@ def evaluate_design(
     the surrogate (engine/optimizer/surrogate.py) exists specifically to
     avoid calling this thousands of times per optimization run.
     """
+    slope_deg = slope_of(individual, fixed)
+    height_m = height_of(individual, fixed)
+
     geometry = make_simple_box_geometry(
         materials_lib,
         wall_material_id=individual["wall_material_id"],
@@ -115,8 +125,9 @@ def evaluate_design(
         wall_thickness_m=individual["wall_thickness_m"],
         insulation_thickness_m=individual["insulation_thickness_m"],
         floor_area_m2=fixed.floor_area_m2,
-        ceiling_height_m=fixed.ceiling_height_m,
+        ceiling_height_m=height_m,
         leakage_area_cm2=individual["leakage_area_cm2"],
+        roof_slope_deg=slope_deg,
     )
 
     gains = InternalGains(sensible_heat_w=fixed.sensible_heat_w)
@@ -135,12 +146,27 @@ def evaluate_design(
 
     cost, mass, carbon = _material_cost_mass_carbon(materials_lib, geometry)
 
+    # Phase E: snow load is a hard constraint only when the user set a limit.
+    # It rides the same rejection path as the thermal safety interlock, so a
+    # design over the snow limit can never reach the returned Pareto front.
+    safety_passed = result.safety.passed
+    safety_reasons = list(result.safety.reasons)
+    snow_reason = snow_violation_reason(
+        slope_deg, fixed.ground_snow_load_kpa, fixed.max_roof_snow_load_kpa
+    )
+    if snow_reason:
+        safety_passed = False
+        safety_reasons.append(snow_reason)
+
     return ObjectiveResult(
         comfort_coldest_hour_c=result.min_indoor_temp_c,
         cost_inr=cost,
         weight_kg=mass,
         carbon_kgco2e=carbon,
-        safety_passed=result.safety.passed,
-        safety_reasons=result.safety.reasons,
+        safety_passed=safety_passed,
+        safety_reasons=safety_reasons,
         wall_u_value_wm2k=geometry.surfaces[0].assembly.u_value(),
+        roof_slope_deg=slope_deg,
+        ceiling_height_m=height_m,
+        roof_snow_load_kpa=roof_snow_load_kpa(slope_deg, fixed.ground_snow_load_kpa),
     )

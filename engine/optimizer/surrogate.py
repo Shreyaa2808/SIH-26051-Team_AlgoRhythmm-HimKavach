@@ -66,11 +66,15 @@ class DesignEncoder:
         self.space = space
         self.wall_ids = list(space.wall_material_ids)
         self.ins_ids = list(space.insulation_material_ids)
+        # Phase E: the continuous genes now depend on the run (roof slope /
+        # ceiling height are optional). Take them from the search space so
+        # the surrogate always sees exactly the genes the GA is varying.
+        self.cont_fields = tuple(space.continuous_bounds.keys())
 
     def encode(self, individual: dict) -> np.ndarray:
         wall_oh = [1.0 if individual["wall_material_id"] == w else 0.0 for w in self.wall_ids]
         ins_oh = [1.0 if individual["insulation_material_id"] == i else 0.0 for i in self.ins_ids]
-        cont = [individual[f] for f in CONTINUOUS_FIELDS]
+        cont = [individual[f] for f in self.cont_fields]
         return np.array(wall_oh + ins_oh + cont, dtype=float)
 
     def encode_batch(self, individuals: list[dict]) -> np.ndarray:

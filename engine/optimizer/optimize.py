@@ -39,7 +39,8 @@ from dataclasses import dataclass
 from engine.materials.loader import MaterialsLibrary
 from engine.optimizer.nsga2 import NSGA2, NSGA2Config, EvaluatedIndividual
 from engine.optimizer.objectives import ObjectiveResult, evaluate_design
-from engine.optimizer.search_space import DesignSpace, FixedParams
+from engine.optimizer.search_space import DesignSpace, FixedParams, height_of, slope_of
+from engine.optimizer.snow import roof_snow_load_kpa, snow_violation_reason
 from engine.solver.thermal_solver import SiteSpec
 
 try:
@@ -58,6 +59,9 @@ class OptimizeConfig:
     retrain_every_n_generations: int = 3
     use_surrogate: bool = True
     seed: int | None = 42
+    # Phase E: opt-in free genes (off = legacy search space)
+    free_roof_slope: bool = False
+    free_ceiling_height: bool = False
 
 
 @dataclass
@@ -90,7 +94,11 @@ def run_new_build_optimization(
 ) -> list[RankedDesign]:
     config = config or OptimizeConfig()
     rng = random.Random(config.seed)
-    space = DesignSpace(materials_lib)
+    space = DesignSpace(
+        materials_lib,
+        free_roof_slope=config.free_roof_slope,
+        free_ceiling_height=config.free_ceiling_height,
+    )
 
     def run_physics(genome: dict) -> ObjectiveResult:
         return evaluate_design(
@@ -122,14 +130,26 @@ def run_new_build_optimization(
             # UNKNOWN at this point — we optimistically assume feasible so
             # the GA can rank it, but this individual is NOT allowed to
             # leave the pipeline without the step-4 physics safety check.
+            # Snow load is closed-form in the genome (no physics needed), so
+            # unlike thermal safety it CAN be checked exactly here — this
+            # stops the GA wasting its population on designs over the
+            # user's snow limit. Thermal safety is still only checked in
+            # step 4.
+            slope = slope_of(genome, fixed)
+            snow_reason = snow_violation_reason(
+                slope, fixed.ground_snow_load_kpa, fixed.max_roof_snow_load_kpa
+            )
             fake_obj = ObjectiveResult(
                 comfort_coldest_hour_c=pred.comfort_coldest_hour_c,
                 cost_inr=pred.cost_inr,
                 weight_kg=pred.weight_kg,
                 carbon_kgco2e=None,
-                safety_passed=True,
-                safety_reasons=[],
+                safety_passed=snow_reason is None,
+                safety_reasons=[snow_reason] if snow_reason else [],
                 wall_u_value_wm2k=float("nan"),
+                roof_slope_deg=slope,
+                ceiling_height_m=height_of(genome, fixed),
+                roof_snow_load_kpa=roof_snow_load_kpa(slope, fixed.ground_snow_load_kpa),
             )
             return _to_evaluated(genome, fake_obj)
 
