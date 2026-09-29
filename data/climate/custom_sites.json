@@ -173,5 +173,13 @@
     "elevation_m": 4128.986816,
     "label": "Samthang Chuling, Sham, Ladakh, India",
     "resolved_at": 1790689526.7031043
+  },
+  "custom_34p091_77p547": {
+    "lat": 34.09142,
+    "lon": 77.54747,
+    "elevation_m": 3341.315674,
+    "label": "Palam, Leh, Leh district, Ladakh, 194101, India",
+    "resolved_at": 1790691339.9193783
   }
+
 }

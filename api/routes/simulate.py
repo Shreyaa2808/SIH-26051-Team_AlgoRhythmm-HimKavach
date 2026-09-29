@@ -113,6 +113,23 @@ class SimulateResponse(BaseModel):
     heat_flow_kwh: dict[str, float] = {}
     solar_absorbed_kwh: float = 0.0
 
+    # Echo the actual baseline inputs so downstream optimization can use the
+    # same geometry/loads instead of silently falling back to 16 m² / 2.4 m.
+    floor_area_m2: float = 16.0
+    ceiling_height_m: float = 2.4
+    sensible_heat_w: float = 200.0
+    orientation_deg: float = 0.0
+    roof_slope_deg: float = 0.0
+    leakage_area_cm2: float = 200.0
+    co_generation_rate_lpm: float = 0.0
+    window_wall: str | None = None
+    window_area_m2: float = 0.0
+    window_material_id: str = "double_glazed_low_e_window"
+    night_gate_enabled: bool = False
+    night_gate_close_hour: float = 19.0
+    night_gate_open_hour: float = 7.0
+    night_gate_closed_leakage_area_cm2: float = 60.0
+
 
 def _load_climate_for_site(site_id: str) -> ClimateSeries:
     # look for any cached year file for this site (fetch_nasa_power.py names
@@ -217,4 +234,18 @@ def run_simulation(req: SimulateRequest) -> SimulateResponse:
         night_gate_hours_closed=result.night_gate_hours_closed,
         heat_flow_kwh=result.heat_flow_kwh,
         solar_absorbed_kwh=result.solar_absorbed_kwh,
+        floor_area_m2=req.floor_area_m2,
+        ceiling_height_m=req.ceiling_height_m,
+        sensible_heat_w=req.sensible_heat_w,
+        orientation_deg=req.orientation_deg,
+        roof_slope_deg=req.roof_slope_deg,
+        leakage_area_cm2=req.leakage_area_cm2,
+        co_generation_rate_lpm=req.co_generation_rate_lpm,
+        window_wall=req.window_wall,
+        window_area_m2=req.window_area_m2,
+        window_material_id=req.window_material_id,
+        night_gate_enabled=req.night_gate_enabled,
+        night_gate_close_hour=req.night_gate_close_hour,
+        night_gate_open_hour=req.night_gate_open_hour,
+        night_gate_closed_leakage_area_cm2=req.night_gate_closed_leakage_area_cm2,
     )

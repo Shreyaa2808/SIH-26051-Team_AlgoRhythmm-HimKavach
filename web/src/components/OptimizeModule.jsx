@@ -1,114 +1,165 @@
 import { useMemo, useState } from 'react';
-import ParetoChart from './ParetoChart';
-import ParetoReport from "./ParetoReport";
-import ViewSimulation from './ViewSimulation';
+import DesignThermalPanel from './DesignThermalPanel';
 
-const money = (v) => `₹${v.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+const money = (v) => `₹${Number(v ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+const titleCase = (s) => (s ? s.replaceAll('_', ' ') : '—');
 
-function Card({ tag, tagClass, title, d, selected, onSelect, onUseInSandbox }) {
+function DesignCard({ item, selected, onSelect, onUseInSandbox, siteId, dayOfYear, context }) {
+  const [showThermal, setShowThermal] = useState(false);
+  const d = item.design ?? item;
+
   return (
-    <div
-      className={`pareto-card ${tagClass === 'balanced-tag' ? 'balanced' : ''}`}
-      onClick={() => onSelect(d)}
-      style={{
-        cursor: 'pointer',
-        outline: selected ? '2px solid var(--text)' : 'none',
-        outlineOffset: 2,
-      }}
+    <article
+      className={`pareto-card ${selected ? 'balanced' : ''}`}
+      style={{ cursor: 'default' }}
     >
-      <span className={`pareto-tag ${tagClass}`}>{tag}</span>
-      <h3>{title}</h3>
-      <div className="pareto-stats">
-        <div><span>Capital Cost</span><strong>{money(d.cost_inr)}</strong></div>
-        <div><span>Weight</span><strong>{d.weight_kg.toFixed(0)} kg</strong></div>
-        <div><span>Coldest Hour</span><strong>{d.comfort_coldest_hour_c.toFixed(1)}°C</strong></div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
         <div>
-          <span>Carbon</span>
-          <strong>{d.carbon_kgco2e != null ? `${d.carbon_kgco2e.toFixed(0)} kgCO₂e` : '—'}</strong>
+          <span className="pareto-tag balanced-tag">{item.label || 'Design option'}</span>
+          <h3>{item.label ? `${item.label} design` : 'Design option'}</h3>
         </div>
+        {selected && <span className="design-selected-pill">Selected</span>}
       </div>
-      <p className="spec-line"><strong>Wall:</strong> {d.wall_material_id.replaceAll('_', ' ')} ({d.wall_thickness_m.toFixed(2)}m)</p>
-      <p className="spec-line"><strong>Insulation:</strong> {d.insulation_material_id.replaceAll('_', ' ')} ({d.insulation_thickness_m.toFixed(2)}m)</p>
-      <p className="spec-line">{d.safety_passed ? '✅ Safety passed' : '❌ Safety failed'}</p>
-      {onUseInSandbox && (
+
+      <p className="form-note" style={{ minHeight: 42, margin: '0.25rem 0 0.8rem' }}>
+        {item.why || 'Physics-verified option from the feasible design set.'}
+      </p>
+
+      <div className="pareto-stats">
+        <div><span>Material cost</span><strong>{money(d.cost_inr)}</strong></div>
+        <div><span>Coldest hour</span><strong>{Number(d.comfort_coldest_hour_c).toFixed(1)}°C</strong></div>
+        <div><span>Envelope weight</span><strong>{Number(d.weight_kg).toFixed(0)} kg</strong></div>
+        <div><span>Embodied carbon</span><strong>{d.carbon_kgco2e != null ? `${Number(d.carbon_kgco2e).toFixed(0)} kgCO₂e` : 'Unknown'}</strong></div>
+      </div>
+
+      <div className="design-spec-grid">
+        <div><span>Wall</span><strong>{titleCase(d.wall_material_id)}</strong></div>
+        <div><span>Insulation</span><strong>{titleCase(d.insulation_material_id)}</strong></div>
+        <div><span>Wall thickness</span><strong>{Number(d.wall_thickness_m).toFixed(2)} m</strong></div>
+        <div><span>Insulation thickness</span><strong>{Number(d.insulation_thickness_m).toFixed(2)} m</strong></div>
+        <div><span>Roof slope</span><strong>{Number(d.roof_slope_deg ?? 0).toFixed(0)}°</strong></div>
+        <div><span>Wall U-value</span><strong>{Number(d.wall_u_value_wm2k ?? 0).toFixed(2)} W/m²K</strong></div>
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
         <button
           type="button"
-          className="use-in-sandbox-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onUseInSandbox(d);
-          }}
+          className={selected ? 'primary-btn' : 'export-btn'}
+          onClick={() => onSelect(item)}
         >
-          🏘️ Use in Bulk / Sandbox →
+          {selected ? 'Selected for comparison' : 'Select design'}
         </button>
+        <button
+          type="button"
+          className="export-btn"
+          onClick={() => setShowThermal((v) => !v)}
+        >
+          {showThermal ? 'Hide thermal simulation' : 'View thermal simulation'}
+        </button>
+        {onUseInSandbox && (
+          <button type="button" className="export-btn" onClick={() => onUseInSandbox(d)}>
+            Use in Sandbox →
+          </button>
+        )}
+      </div>
+
+      {showThermal && (
+        <DesignThermalPanel
+          siteId={siteId}
+          dayOfYear={dayOfYear}
+          design={d}
+          context={context}
+        />
       )}
-    </div>
+    </article>
   );
 }
 
 function SearchOptions({ options, onOptionsChange, onRerun, running, canRun }) {
+  const [open, setOpen] = useState(false);
   const set = (patch) => onOptionsChange({ ...options, ...patch });
+
   return (
-    <div className="config-form" style={{ marginBottom: '1.5rem' }}>
-      <h2 style={{ marginTop: 0 }}>Search options</h2>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.2rem', alignItems: 'flex-end' }}>
-        <label>
-          <input
-            type="checkbox"
-            checked={options.optimizeRoofSlope}
-            onChange={(e) => set({ optimizeRoofSlope: e.target.checked })}
-          />{' '}
-          Let optimizer choose roof slope (5–45°)
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={options.optimizeCeilingHeight}
-            onChange={(e) => set({ optimizeCeilingHeight: e.target.checked })}
-          />{' '}
-          Let optimizer choose ceiling height (2.2–3.0 m)
-        </label>
-        <label>
-          Ground snow load (kPa)
-          <br />
-          <input
-            type="number"
-            min="0"
-            step="0.1"
-            value={options.groundSnowKpa}
-            onChange={(e) => set({ groundSnowKpa: e.target.value })}
-            style={{ width: 110 }}
-          />
-        </label>
-        <label>
-          Max roof snow load (kPa)
-          <br />
-          <input
-            type="number"
-            min="0"
-            step="0.1"
-            placeholder="no limit"
-            value={options.maxSnowKpa}
-            onChange={(e) => set({ maxSnowKpa: e.target.value })}
-            style={{ width: 110 }}
-          />
-        </label>
-        <button
-          type="button"
-          className="primary-btn"
-          onClick={onRerun}
-          disabled={running || !canRun}
-        >
-          {running ? 'Optimizing…' : 'Run optimizer'}
-        </button>
-      </div>
-      <p className="form-note" style={{ marginBottom: 0 }}>
-        Snow load uses the simple IS 875 (Part 4) monopitch shape coefficient (0.8 up to 30°, tapering to
-        0 at 60°) applied to the ground snow load you enter. It is a screening check, not a structural
-        design — verify against the current code edition. With no limit set, snow load is reported but
-        never rejects a design.
-      </p>
-    </div>
+    <section className="config-form optimization-controls">
+      <button
+        type="button"
+        className="advanced-toggle"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <span>
+          <strong>Advanced engineering constraints</strong>
+          <small>Optional controls for roof geometry and snow-load screening</small>
+        </span>
+        <span>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="advanced-panel">
+          <div className="optimization-scope-note">
+            <strong>Fixed from the shelter brief</strong>
+            <span>Geometry, occupancy/load assumptions, orientation and opening configuration stay fixed during this run.</span>
+          </div>
+          <div className="optimization-control-grid">
+            <label>
+              <input
+                type="checkbox"
+                checked={options.optimizeRoofSlope}
+                onChange={(e) => set({ optimizeRoofSlope: e.target.checked })}
+              />{' '}
+              Let optimizer vary roof slope (5–45°)
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                checked={options.optimizeCeilingHeight}
+                onChange={(e) => set({ optimizeCeilingHeight: e.target.checked })}
+              />{' '}
+              Let optimizer vary ceiling height (2.2–3.0 m)
+            </label>
+
+            <label>
+              Ground snow load (kPa)
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                value={options.groundSnowKpa}
+                onChange={(e) => set({ groundSnowKpa: e.target.value })}
+              />
+            </label>
+
+            <label>
+              Maximum roof snow load (kPa)
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                placeholder="No limit"
+                value={options.maxSnowKpa}
+                onChange={(e) => set({ maxSnowKpa: e.target.value })}
+              />
+            </label>
+          </div>
+
+          <p className="form-note">
+            These are screening controls, not structural design checks. The optimizer searches the envelope variables
+            exposed by the engineering model while keeping the user's baseline shelter configuration fixed. Every returned
+            design is then independently simulatable from its own parameters.
+          </p>
+          <p className="form-note">
+            These controls do not replace a structural code check. The optimizer still physics-verifies
+            every design returned to the user. Materials, wall/insulation thickness and envelope leakage are
+            already part of the optimization search space.
+          </p>
+
+          <button type="button" className="primary-btn" onClick={onRerun} disabled={running || !canRun}>
+            {running ? 'Optimizing…' : 'Re-run with these constraints'}
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -121,105 +172,78 @@ export default function OptimizeModule({
   onOptionsChange,
   onRerun,
   onExportCSV,
-  onExportPDF,
   onUseInSandbox,
-  onOpenDesign,
-    instantiating,
-  instantiateError,
-  station,
-  designDay,
+  siteId,
 }) {
+  const curated = useMemo(
+    () => (data?.curated_designs || []).filter((item) => item?.design),
+    [data]
+  );
+  const explore = useMemo(() => data?.explore_more || [], [data]);
   const [picked, setPicked] = useState(null);
 
-  const analysis = useMemo(() => {
-    if (!data?.pareto_front?.length) return null;
-    const front = data.pareto_front;
-    const sorted = [...front].sort((a, b) => a.cost_inr - b.cost_inr);
-    const cheapest = sorted[0];
-    const maxPerf = [...front].sort(
-      (a, b) => b.comfort_coldest_hour_c - a.comfort_coldest_hour_c
-    )[0];
-    const withCarbon = front.filter((d) => d.carbon_kgco2e != null);
-    const lowestCarbon = withCarbon.length
-      ? [...withCarbon].sort((a, b) => a.carbon_kgco2e - b.carbon_kgco2e)[0]
-      : null;
-    const balanced =
-      front.find((d) => d !== cheapest && d !== maxPerf && d !== lowestCarbon) ||
-      front[Math.floor(front.length / 2)];
-    return { sorted, cheapest, maxPerf, lowestCarbon, balanced };
-  }, [data]);
+  const selected = picked || curated[0] || (explore[0] ? { label: 'Design option', design: explore[0] } : null);
 
-  const controls = (
-    <SearchOptions
-      options={options}
-      onOptionsChange={onOptionsChange}
-      onRerun={onRerun}
-      running={running}
-      canRun={canRun}
-    />
-  );
-
-  if (!data || !analysis) {
+  if (!data || !selected) {
     return (
       <div>
         {error && <p className="form-error">{error}</p>}
         {!data && !error && (
           <p className="form-note">
             {canRun
-              ? 'Set your search options below and run the optimizer, or use "Optimize This Design" from the Simulate tab.'
-              : 'Pick a location on the Micro-Siting tab first, then run the optimizer.'}
+              ? 'The baseline is ready. Review optional constraints below, then run the optimizer.'
+              : 'Complete the site and baseline steps first.'}
           </p>
         )}
-        {controls}
+        <SearchOptions
+          options={options}
+          onOptionsChange={onOptionsChange}
+          onRerun={onRerun}
+          running={running}
+          canRun={canRun}
+        />
       </div>
     );
   }
 
-  const { sorted, cheapest, maxPerf, lowestCarbon, balanced } = analysis;
-  // a stale pick from a previous run is not in this front → fall back
-  const selected = picked && data.pareto_front.includes(picked) ? picked : balanced;
-
-  const labelFor = (d) => {
-    if (d === cheapest) return 'Cheapest';
-    if (d === balanced) return 'Balanced';
-    if (d === maxPerf) return 'Max Performance';
-    if (d === lowestCarbon) return 'Lowest Carbon';
-    return 'Custom pick';
-  };
-
-  const showSlope = data.context?.optimize_roof_slope || selected.roof_slope_deg > 0;
-  const showHeight = data.context?.optimize_ceiling_height;
-  const snowLimit = data.context?.max_roof_snow_load_kpa;
-  const curated = [
-  ['Cheapest', cheapest],
-  ['Balanced', balanced],
-  ['Max Performance', maxPerf],
-  ['Lowest Carbon', lowestCarbon],
-]
-  .filter(([, d]) => d)
-  .map(([label, d]) => ({ label, ...d }));
-
-    return (
+  return (
     <div>
-      <div className="module-header">
+      {error && <p className="form-error">{error}</p>}
+
+      <section className="optimization-intro">
         <div>
-          <div className="eyebrow">Module 5 · Multi-Objective Pareto Results</div>
-          <h2>Pareto-Optimized Shelter Designs</h2>
-          <p className="form-note" style={{ margin: '0.4rem 0 0' }}>
-            {data.pareto_front.length} optimal designs found. Click a card or a chart point to inspect it.
+          <div className="eyebrow">Decision support · physics-verified candidates</div>
+          <h2>Choose a shelter strategy</h2>
+          <p>
+            HimKavach searches material, thickness and envelope configurations, removes designs that fail
+            the safety interlock, and presents a small set of distinct trade-offs instead of making you
+            interpret a raw optimization plot.
           </p>
-          <details style={{ marginTop: '0.6rem' }}>
-            <summary style={{ cursor: 'pointer', fontSize: '0.85rem' }}>About these results</summary>
-            <ul
-              className="form-note"
-              style={{ maxWidth: 640, margin: '0.5rem 0 0', paddingLeft: '1.2rem', lineHeight: 1.6 }}
-            >
-              <li>Designs are ranked on comfort, cost and weight.</li>
-              <li>Carbon is shown for reference and is not used to rank designs.</li>
-              <li>A "—" for carbon means one of the materials has no carbon data on file.</li>
-              <li>The four cards below highlight the cheapest, most balanced, best-performing and lowest-carbon options.</li>
-            </ul>
-          </details>
+        </div>
+        <div className="optimization-objectives">
+          <span>Thermal comfort</span>
+          <span>Material cost</span>
+          <span>Envelope weight</span>
+          <span>Carbon reported</span>
+        </div>
+      </section>
+
+      <SearchOptions
+        options={options}
+        onOptionsChange={onOptionsChange}
+        onRerun={onRerun}
+        running={running}
+        canRun={canRun}
+      />
+
+      <div className="module-header" style={{ marginTop: '1.25rem' }}>
+        <div>
+          <div className="eyebrow">Recommended options</div>
+          <h2>{curated.length} design paths to compare</h2>
+          <p className="form-note" style={{ margin: '0.4rem 0 0' }}>
+            Each card is a real candidate from the optimizer's feasible Pareto set. The labels describe a
+            trade-off; they are not a universal ranking.
+          </p>
         </div>
         <div className="export-btns">
           <button className="export-btn" onClick={onExportCSV}>⬇ Export CSV</button>
@@ -227,7 +251,7 @@ export default function OptimizeModule({
             className="export-btn primary"
             onClick={() => {
               const old = document.title;
-              document.title = 'HimKavach-Pareto-Report';
+              document.title = 'HimKavach-Optimization-Report';
               window.print();
               document.title = old;
             }}
@@ -237,100 +261,53 @@ export default function OptimizeModule({
         </div>
       </div>
 
-      {error && <p className="form-error">{error}</p>}
-
-      {/* 1. Recommended design cards */}
-      <div className="pareto-grid" style={{ marginBottom: '1.5rem' }}>
-        <Card tag="Cheapest" tagClass="cheapest" title="Lowest Capital Cost Design" d={cheapest}
-          selected={selected === cheapest} onSelect={setPicked} onUseInSandbox={onUseInSandbox} />
-        <Card tag="Balanced" tagClass="balanced-tag" title="Balanced Cost/Comfort Design" d={balanced}
-          selected={selected === balanced} onSelect={setPicked} onUseInSandbox={onUseInSandbox} />
-        <Card tag="Max Performance" tagClass="max" title="Maximum Comfort Design" d={maxPerf}
-          selected={selected === maxPerf} onSelect={setPicked} onUseInSandbox={onUseInSandbox} />
-        {lowestCarbon && (
-          <Card tag="Lowest Carbon" tagClass="cheapest" title="Lowest Embodied Carbon Design" d={lowestCarbon}
-            selected={selected === lowestCarbon} onSelect={setPicked} onUseInSandbox={onUseInSandbox} />
-        )}
+      <div className="pareto-grid">
+        {curated.map((item, i) => (
+          <DesignCard
+            key={`${item.label}-${i}`}
+            item={item}
+            selected={selected === item}
+            onSelect={setPicked}
+            onUseInSandbox={onUseInSandbox}
+            siteId={siteId}
+            dayOfYear={data.day_of_year}
+            context={data.context}
+          />
+        ))}
       </div>
 
-      {/* 2. Selected design */}
-      <div className="config-form" style={{ marginBottom: '1.5rem' }}>
-        <div className="eyebrow">Selected design · {labelFor(selected)}</div>
-        <div className="pareto-stats" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-          <div><span>Capital Cost</span><strong>{money(selected.cost_inr)}</strong></div>
-          <div><span>Coldest Hour</span><strong>{selected.comfort_coldest_hour_c.toFixed(1)}°C</strong></div>
-          <div><span>Weight</span><strong>{selected.weight_kg.toFixed(0)} kg</strong></div>
-          <div>
-            <span>Carbon</span>
-            <strong>{selected.carbon_kgco2e != null ? `${selected.carbon_kgco2e.toFixed(0)} kgCO₂e` : '—'}</strong>
+      {explore.length > 0 && (
+        <section className="config-form" style={{ marginTop: '1.5rem' }}>
+          <div className="eyebrow">Additional feasible options</div>
+          <h3 style={{ margin: '0.25rem 0 0.3rem' }}>Explore more designs</h3>
+          <p className="form-note">
+            These are additional physics-verified points from the same feasible front. Use Compare for a
+            structured side-by-side view.
+          </p>
+          <div className="explore-list">
+            {explore.map((d, i) => (
+              <button
+                type="button"
+                className="explore-row"
+                key={`${d.wall_material_id}-${d.insulation_material_id}-${i}`}
+                onClick={() => setPicked({ label: `Design ${i + 1}`, design: d })}
+              >
+                <span>{titleCase(d.wall_material_id)} + {titleCase(d.insulation_material_id)}</span>
+                <span>{money(d.cost_inr)} · {Number(d.comfort_coldest_hour_c).toFixed(1)}°C · {Number(d.weight_kg).toFixed(0)} kg</span>
+              </button>
+            ))}
           </div>
-          {showSlope && (
-            <div><span>Roof slope</span><strong>{selected.roof_slope_deg.toFixed(0)}°</strong></div>
-          )}
-          {showHeight && (
-            <div><span>Ceiling height</span><strong>{selected.ceiling_height_m.toFixed(2)} m</strong></div>
-          )}
-          {(data.context?.ground_snow_load_kpa ?? 0) > 0 && (
-            <div>
-              <span>Roof snow load{snowLimit != null ? ` (limit ${snowLimit})` : ''}</span>
-              <strong>{selected.roof_snow_load_kpa.toFixed(2)} kPa</strong>
-            </div>
-          )}
+        </section>
+      )}
+
+      <section className="selected-design-strip">
+        <div>
+          <div className="eyebrow">Current working selection</div>
+          <strong>{selected.label || 'Design option'}</strong>
+          <span>{money(selected.design.cost_inr)} · {Number(selected.design.comfort_coldest_hour_c).toFixed(1)}°C coldest hour</span>
         </div>
-        <p className="spec-line">
-          <strong>Wall:</strong> {selected.wall_material_id.replaceAll('_', ' ')} ({selected.wall_thickness_m.toFixed(2)}m)
-          {' · '}
-          <strong>Insulation:</strong> {selected.insulation_material_id.replaceAll('_', ' ')} ({selected.insulation_thickness_m.toFixed(2)}m)
-          {' · '}
-          <strong>Leakage:</strong> {selected.leakage_area_cm2.toFixed(0)} cm²
-        </p>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.7rem', marginTop: '0.8rem' }}>
-          <button
-            type="button"
-            className="primary-btn"
-            disabled={instantiating}
-            onClick={() => onOpenDesign(selected, 'twin', labelFor(selected))}
-          >
-            {instantiating ? 'Building model…' : 'Open in 3D twin →'}
-          </button>
-          <button
-            type="button"
-            className="export-btn"
-            disabled={instantiating}
-            onClick={() => onOpenDesign(selected, 'blueprint', labelFor(selected))}
-          >
-            Open blueprint →
-          </button>
-          {onUseInSandbox && (
-            <button type="button" className="export-btn" onClick={() => onUseInSandbox(selected)}>
-              🏘️ Use in Bulk / Sandbox →
-            </button>
-          )}
-          <ViewSimulation result={data} design={selected} />
-        </div>
-
-        {instantiateError && <p className="form-error">{instantiateError}</p>}
-        <p className="form-note" style={{ marginBottom: 0 }}>
-          Opening builds a real per-wall shelter model from this design (square footprint, same
-          construction on every wall, roof and floor, no windows — exactly what the optimizer
-          simulated) and saves it as a project.
-        </p>
-      </div>
-
-      {/* 3. Pareto chart (moved down) */}
-      <div className="config-form" style={{ marginBottom: '1.5rem' }}>
-        <ParetoChart points={sorted} selected={selected} onSelect={setPicked} />
-      </div>
-
-      {controls}
-      <ParetoReport
-        station={station}
-        designDay={designDay}
-        curated={curated}
-        frontCount={data.pareto_front.length}
-      />
+        <span className="form-note">Use the Compare step for the full decision table and final selection.</span>
+      </section>
     </div>
   );
 }
-

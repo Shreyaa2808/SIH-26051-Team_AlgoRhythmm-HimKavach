@@ -54,6 +54,19 @@ class OptimizeRequest(BaseModel):
         None, ge=0, le=20, description="structural limit; null = report snow load but never reject on it"
     )
 
+    # Baseline geometry/loads echoed by /simulate. These are fixed while the
+    # optimizer searches envelope decisions, so optimization starts from the
+    # shelter the user actually described.
+    orientation_deg: float = Field(0.0, ge=0, lt=360)
+    window_wall: str | None = None
+    window_area_m2: float = Field(0.0, ge=0)
+    window_material_id: str = "double_glazed_low_e_window"
+    co_generation_rate_lpm: float = Field(0.0, ge=0)
+    night_gate_enabled: bool = False
+    night_gate_close_hour: float = 19.0
+    night_gate_open_hour: float = 7.0
+    night_gate_closed_leakage_area_cm2: float = Field(60.0, gt=0)
+
     # Phase 3 "explore more" pagination
     explore_offset: int = Field(0, ge=0)
     explore_page_size: int = Field(6, ge=1, le=20)
@@ -88,6 +101,15 @@ class OptimizeContext(BaseModel):
     max_roof_snow_load_kpa: float | None
     optimize_roof_slope: bool
     optimize_ceiling_height: bool
+    orientation_deg: float
+    window_wall: str | None
+    window_area_m2: float
+    window_material_id: str
+    co_generation_rate_lpm: float
+    night_gate_enabled: bool
+    night_gate_close_hour: float
+    night_gate_open_hour: float
+    night_gate_closed_leakage_area_cm2: float
 
 
 class CuratedDesignOut(BaseModel):
@@ -161,6 +183,15 @@ def run_optimization(req: OptimizeRequest) -> OptimizeResponse:
         roof_slope_deg=req.roof_slope_deg,
         ground_snow_load_kpa=req.ground_snow_load_kpa,
         max_roof_snow_load_kpa=req.max_roof_snow_load_kpa,
+        orientation_deg=req.orientation_deg,
+        window_wall=req.window_wall,
+        window_area_m2=req.window_area_m2,
+        window_material_id=req.window_material_id,
+        co_generation_rate_lpm=req.co_generation_rate_lpm,
+        night_gate_enabled=req.night_gate_enabled,
+        night_gate_close_hour=req.night_gate_close_hour,
+        night_gate_open_hour=req.night_gate_open_hour,
+        night_gate_closed_leakage_area_cm2=req.night_gate_closed_leakage_area_cm2,
     )
 
     config = OptimizeConfig(
@@ -263,6 +294,15 @@ def run_optimization(req: OptimizeRequest) -> OptimizeResponse:
             max_roof_snow_load_kpa=req.max_roof_snow_load_kpa,
             optimize_roof_slope=req.optimize_roof_slope,
             optimize_ceiling_height=req.optimize_ceiling_height,
+            orientation_deg=req.orientation_deg,
+            window_wall=req.window_wall,
+            window_area_m2=req.window_area_m2,
+            window_material_id=req.window_material_id,
+            co_generation_rate_lpm=req.co_generation_rate_lpm,
+            night_gate_enabled=req.night_gate_enabled,
+            night_gate_close_hour=req.night_gate_close_hour,
+            night_gate_open_hour=req.night_gate_open_hour,
+            night_gate_closed_leakage_area_cm2=req.night_gate_closed_leakage_area_cm2,
         ),
     )
 
@@ -294,6 +334,7 @@ class InstantiateRequest(BaseModel):
     roof_slope_deg: float = 0.0
     sensible_heat_w: float = 200.0
     ground_snow_load_kpa: float = Field(0.0, ge=0, le=20)
+    orientation_deg: float = Field(0.0, ge=0, lt=360)
     occupancy_purpose: OccupancyPurpose = OccupancyPurpose.civilian_permanent
     headcount: int = Field(4, ge=1, le=200)
     name: str | None = None
@@ -323,6 +364,7 @@ def instantiate_design(req: InstantiateRequest) -> InstantiateResponse:
         floor_area_m2=req.floor_area_m2,
         default_ceiling_height_m=req.ceiling_height_m,
         default_roof_slope_deg=req.roof_slope_deg,
+        orientation_deg=req.orientation_deg,
         purpose=req.occupancy_purpose,
         headcount=req.headcount,
         name=req.name or "Optimizer pick",
