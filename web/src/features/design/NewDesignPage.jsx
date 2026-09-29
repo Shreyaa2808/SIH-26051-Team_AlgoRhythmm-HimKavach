@@ -34,7 +34,7 @@ function boot(store, mode, location, designDay) {
  */
 export default function NewDesignPage({
   location, designDay, onLocationChange, onDesignDayChange, onBaselineResult, currentResult = null,
-  mode = 'new-build', store: storeProp,
+  mode = 'new-build', store: storeProp, onDesignChange,
 }) {
   const store = useMemo(() => storeProp ?? getDefaultStore(), [storeProp]);
   const [rec, setRec] = useState(() => boot(store, mode, location, designDay));
@@ -95,6 +95,7 @@ export default function NewDesignPage({
     if (site?.designDay && site.designDay !== designDay) cbs.current.onDesignDayChange?.(site.designDay);
     // don't wipe results the app is already showing (e.g. after switching tabs and back)
     if (initialRun && !currentResult) cbs.current.onBaselineResult?.(initialRun.data);
+    onDesignChange?.(design);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -107,6 +108,7 @@ export default function NewDesignPage({
     setDesign(hydrateDesignInput(next.design));
     setName(next.name);
     setInitialRun(run);
+    onDesignChange?.(hydrateDesignInput(next.design));
     setStatus('saved');
     setSavedAt(next.updatedAt);
     setRev((r) => r + 1);
@@ -175,7 +177,7 @@ export default function NewDesignPage({
           onDesignDayChange={onDesignDayChange}
           onBaselineResult={onBaselineResult}
           value={design}
-          onChange={(d) => { setDesign(d); schedule({ design: d }); }}
+          onChange={(d) => { setDesign(d); onDesignChange?.(d); schedule({ design: d }); }}
           initialStep={rec.step}
           onStepChange={(i) => schedule({ step: i })}
           initialRun={initialRun}

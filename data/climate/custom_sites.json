@@ -52,7 +52,7 @@
     "lat": 33.80654,
     "lon": 79.81567,
     "elevation_m": 4926.0,
-    "label": "\u591a\u739b\u4e61, \u65e5\u571f\u53bf \u0f62\u0f74\u0f0b\u0f50\u0f7c\u0f42\u0f0b\u0f62\u0fab\u0f7c\u0f44\u0f0b\u0f0d, \u963f\u91cc\u5730\u533a \u0f58\u0f44\u0f60\u0f0b\u0f62\u0f72\u0f66\u0f0b\u0f66\u0f0b\u0f41\u0f74\u0f63\u0f0b, \u897f\u85cf\u81ea\u6cbb\u533a \u0f56\u0f7c\u0f51\u0f0b\u0f62\u0f44\u0f0b\u0f66\u0f90\u0fb1\u0f7c\u0f44\u0f0b\u0f63\u0f97\u0f7c\u0f44\u0f66\u0f0d, \u4e2d\u56fd",
+    "label": "Domar, Rutog County, Ngari Prefecture, Tibet, China",
     "resolved_at": 1790513765.68238
   },
   "custom_34p171_77p629": {
@@ -116,6 +116,62 @@
     "lon": 77.5771,
     "elevation_m": 3416.199951,
     "label": "Khardung La Road, Chaktsal Gang, Leh, Leh district, Ladakh, 194101, India",
-    "resolved_at": 1790686381.114761
+    "resolved_at": 1790688067.0193446
+  },
+  "custom_35p500_77p000": {
+    "lat": 35.5,
+    "lon": 77.0,
+    "elevation_m": 4903.062012,
+    "label": "Nubra, Ladakh, 194401, India",
+    "resolved_at": 1790685046.1246586
+  },
+  "custom_34p630_75p365": {
+    "lat": 34.63029822945902,
+    "lon": 75.36499550942747,
+    "elevation_m": 4272.03125,
+    "label": "\u06af\u0644\u062a\u0631\u06cc \u062a\u062d\u0635\u06cc\u0644, \u0636\u0644\u0639 \u0633\u06a9\u0631\u062f\u0648, \u0628\u0644\u062a\u0633\u062a\u0627\u0646 \u0688\u0648\u06cc\u0698\u0646, \u06af\u0644\u06af\u062a \u0628\u0644\u062a\u0633\u062a\u0627\u0646, 16100, \u067e\u0627\u06a9\u0633\u062a\u0627\u0646",
+    "resolved_at": 1790685671.5931602
+  },
+  "custom_34p215_77p328": {
+    "lat": 34.21464126810258,
+    "lon": 77.32786611738362,
+    "elevation_m": 3480.897705,
+    "label": "Nimo, Leh district, Ladakh, India",
+    "resolved_at": 1790687118.03288
+  },
+  "custom_34p433_75p767": {
+    "lat": 34.4333,
+    "lon": 75.7667,
+    "elevation_m": 3123.608887,
+    "label": "NH1, Tisboo, Drass, Kargil district, Ladakh, 194102, India",
+    "resolved_at": 1790690049.902023
+  },
+  "custom_35p354_78p096": {
+    "lat": 35.35411192300876,
+    "lon": 78.09645294762433,
+    "elevation_m": 5079.14209,
+    "label": "\u5929\u6587\u70b9\u4f1a\u6664\u7ad9\u516c\u8def, \u7ea2\u67f3\u9547 \u0642\u0649\u0632\u0649\u0644\u064a\u06c7\u0644\u063a\u06c7\u0646 \u0628\u0627\u0632\u0649\u0631\u0649, \u548c\u5b89\u53bf \u062e\u06d4\u0626\u06d5\u0646 (\u0642\u0649\u0632\u0649\u0644\u064a\u06c7\u0644\u063a\u06c7\u0646) \u0646\u0627\u06be\u0649\u064a\u0649\u0633\u0649, \u548c\u7530\u5730\u533a \u062e\u0648\u062a\u06d5\u0646 \u06cb\u0649\u0644\u0627\u064a\u0649\u062a\u0649, \u65b0\u7586\u7ef4\u543e\u5c14\u81ea\u6cbb\u533a \u0634\u0649\u0646\u062c\u0627\u06ad \u0626\u06c7\u064a\u063a\u06c7\u0644\u0633\u0649\u0645\u0627\u064a\u0649\u0649\u0631\u0627\u064a\u0648\u0646\u064a, \u4e2d\u56fd",
+    "resolved_at": 1790687833.703832
+  },
+  "custom_34p154_77p664": {
+    "lat": 34.154119137622715,
+    "lon": 77.6641649015999,
+    "elevation_m": 3905.533447,
+    "label": "Pulu Digar, Leh, Leh district, Ladakh, 194101, India",
+    "resolved_at": 1790688162.1563287
+  },
+  "custom_34p020_79p256": {
+    "lat": 34.020111992029534,
+    "lon": 79.25615861652082,
+    "elevation_m": 5932.208984,
+    "label": "Domar, Rutog County, Ngari Prefecture, Tibet, China",
+    "resolved_at": 1790688841.3750796
+  },
+  "custom_34p110_77p145": {
+    "lat": 34.11,
+    "lon": 77.14473,
+    "elevation_m": 4128.986816,
+    "label": "Samthang Chuling, Sham, Ladakh, India",
+    "resolved_at": 1790689526.7031043
   }
 }
