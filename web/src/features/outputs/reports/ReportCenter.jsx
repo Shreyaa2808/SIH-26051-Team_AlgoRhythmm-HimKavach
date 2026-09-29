@@ -26,20 +26,20 @@ export default function ReportCenter({ projectId, selection, location, onProject
 
   return (
     <div className="op-page">
-      <div className="module-header op-noprint">
+      {/* <div className="module-header op-noprint">
         <div>
           <div className="eyebrow">Deliverables</div>
           <h2>Export Center</h2>
           <p>Generate the architect package, the engineering report and the simulation data for the selected design.</p>
         </div>
-      </div>
+      </div> */}
 
-      <div className="op-noprint">
+      {/* <div className="op-noprint">
         <SelectedDesignHeader
           projects={d.projects} projectId={projectId} onProjectChange={(id) => { setDoc(null); onProjectChange?.(id); }}
           project={project} trace={d.trace} selection={d.selection} error={d.error} loading={d.loading}
         />
-      </div>
+      </div> */}
 
       {!projectId || (!d.loading && !project) ? (
         <div className="op-noprint"><NoDesignState projectsError={d.projectsError} hasProjects={d.projects.length > 0} /></div>
