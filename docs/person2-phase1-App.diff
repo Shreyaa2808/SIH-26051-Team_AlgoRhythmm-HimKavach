@@ -1,0 +1,27 @@
+--- a/web/src/App.jsx	2026-09-28 19:16:24.000000000 +0000
++++ b/web/src/App.jsx	2026-09-29 08:06:02.023376301 +0000
+@@ -2,7 +2,7 @@
+ import { API } from './api';
+ import Sidebar from './components/Sidebar';
+ import LocationPicker from './components/LocationPicker';
+-import ConfigForm from './components/ConfigForm';
++import DesignWizard from './features/design/DesignWizard';
+ import RetrofitForm from './components/RetrofitForm';
+ import RetrofitResults from './components/RetrofitResults';
+ import TemperatureChart from './components/TemperatureChart';
+@@ -295,10 +295,12 @@
+                   ← Back
+                 </button>
+ 
+-                <ConfigForm
+-                  defaultSiteId={siteId}
++                <DesignWizard
++                  location={location}
+                   designDay={designDay}
+-                  onResult={handleNewSimResult}
++                  onLocationChange={setLocation}
++                  onDesignDayChange={setDesignDay}
++                  onBaselineResult={handleNewSimResult}
+                 />
+ 
+                 {simResult && (

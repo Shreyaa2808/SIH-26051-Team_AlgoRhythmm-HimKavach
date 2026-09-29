@@ -1,0 +1,88 @@
+/* Design wizard — scoped with the dw- prefix; uses the global CSS variables only. */
+.dw { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.dw-stepper-nav { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.dw-nav-item {
+  display: flex; align-items: center; gap: 0.55rem; padding: 0.5rem 0.9rem;
+  background: var(--glass); border: 1px solid var(--glass-border); border-radius: 999px;
+  color: var(--text-dim); font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+.dw-nav-item:hover { border-color: var(--accent); color: var(--text); }
+.dw-nav-num {
+  width: 1.4rem; height: 1.4rem; border-radius: 50%; display: grid; place-items: center;
+  font-size: 0.72rem; background: rgba(150,170,210,0.25); color: var(--text-dim);
+}
+.dw-nav-item.active { border-color: var(--accent); color: var(--text); background: var(--accent-soft); }
+.dw-nav-item.active .dw-nav-num { background: var(--accent); color: #fff; }
+.dw-nav-item.done .dw-nav-num { background: var(--success); color: #fff; }
+.dw-nav-item.error { border-color: var(--error); }
+.dw-nav-item.error .dw-nav-num { background: var(--error); color: #fff; }
+
+.dw-step { display: flex; flex-direction: column; gap: 1rem; }
+.dw-step-head h2 { margin: 0 0 0.25rem; font-size: 1.35rem; }
+.dw-step-head p { margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.5; }
+
+.dw-card {
+  background: var(--glass); border: 1px solid var(--glass-border); border-radius: 18px;
+  padding: 1.4rem; backdrop-filter: blur(20px); box-shadow: var(--card-shadow);
+  display: flex; flex-direction: column; gap: 0.9rem;
+}
+.dw-card h3 { margin: 0; font-size: 1.02rem; }
+.dw-card-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.dw-eyebrow { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); font-weight: 700; }
+.dw-site-name { margin: 0.2rem 0 0; font-size: 1.15rem; }
+
+.dw-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.8rem; margin: 0; }
+.dw-facts dt { font-size: 0.72rem; color: var(--text-dim); font-weight: 600; }
+.dw-facts dd { margin: 0.15rem 0 0; font-weight: 700; }
+
+.dw-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; }
+.dw-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dw-field { display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.8rem; color: var(--text-dim); font-weight: 600; }
+
+.dw-stepper { display: flex; gap: 0.4rem; }
+.dw-stepper input { text-align: center; }
+.dw-stepper button {
+  width: 2.6rem; border-radius: 10px; border: 1px solid rgba(150,170,210,0.4);
+  background: rgba(255,255,255,0.7); font-size: 1.1rem; cursor: pointer; color: var(--text);
+}
+.dw-stepper button:hover { border-color: var(--accent); }
+
+.dw-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.dw-chip {
+  padding: 0.5rem 0.95rem; border-radius: 999px; border: 1px solid rgba(150,170,210,0.4);
+  background: rgba(255,255,255,0.7); color: var(--text); font-size: 0.85rem; font-weight: 600; cursor: pointer;
+}
+.dw-chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.dw-btn { padding: 0.65rem 1.2rem; border-radius: 12px; font-size: 0.9rem; font-weight: 700; cursor: pointer; border: 1px solid transparent; }
+.dw-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.dw-btn-primary { background: linear-gradient(180deg, #5b9bff, #3f7ef7); color: #fff; box-shadow: 0 6px 20px rgba(63,126,247,0.3); align-self: flex-start; }
+.dw-footer .dw-btn-primary { align-self: auto; }
+.dw-btn-ghost { background: var(--glass); border-color: var(--glass-border); color: var(--text-dim); }
+.dw-btn-ghost:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+
+.dw-footer { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.dw-footer-nav { display: flex; gap: 0.6rem; }
+
+.dw-muted { margin: 0; color: var(--text-dim); font-size: 0.85rem; line-height: 1.5; }
+.dw-error { margin: 0; color: var(--error); font-size: 0.85rem; font-weight: 600; }
+.dw-warn {
+  margin: 0; padding: 0.65rem 0.9rem; border-radius: 10px; font-size: 0.85rem; line-height: 1.5;
+  background: rgba(240,170,40,0.14); border: 1px solid rgba(240,170,40,0.45); color: #7a5410;
+}
+.dw-notes { margin: 0; padding-left: 1.1rem; font-size: 0.84rem; color: var(--text-dim); line-height: 1.55; }
+.dw-notes li.warn { color: #7a5410; }
+
+.dw-climate { display: flex; flex-direction: column; gap: 0.7rem; }
+.dw-stats { display: flex; gap: 2rem; }
+.dw-stats span { display: block; font-size: 0.72rem; color: var(--text-dim); font-weight: 600; }
+.dw-stats strong { font-size: 1.15rem; }
+.dw-spark { width: 100%; max-width: 420px; height: 70px; }
+
+@media (max-width: 640px) {
+  .dw-grid-2 { grid-template-columns: 1fr; }
+  .dw-nav-label { display: none; }
+  .dw-nav-item.active .dw-nav-label { display: inline; }
+}
