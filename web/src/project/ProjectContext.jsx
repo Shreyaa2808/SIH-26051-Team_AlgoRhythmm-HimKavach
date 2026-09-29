@@ -123,7 +123,7 @@ export function ProjectProvider({ children }) {
       value={{
         project,
         saveState,
-        step: project?.meta?.step ?? 'project',
+        step: (project?.meta?.step === 'compare' ? 'optimize' : project?.meta?.step) ?? 'project',
         update,
         setStep,
         rename,

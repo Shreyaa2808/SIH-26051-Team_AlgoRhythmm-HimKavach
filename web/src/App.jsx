@@ -600,7 +600,7 @@ import { exportOptimizeCSV, fetchInstantiate, fetchOptimize } from './project/ac
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import ProjectHome, { ProjectOverview } from './components/ProjectHome';
-import { ComingSoon, ErrorBanner, LoadingState, StepHeader } from './components/shared/Shared';
+import { ComingSoon, LoadingState, StepHeader } from './components/shared/Shared';
 
 import LocationPicker from './components/LocationPicker';
 import ConfigForm from './components/ConfigForm';
@@ -1011,8 +1011,8 @@ function Journey() {
               title="Optimize"
               description="Find designs that balance comfort, cost, weight and carbon."
               onBack={goBack('optimize')}
-              onNext={project.optimizedDesigns.length ? goNext('optimize') : undefined}
-              nextLabel="Compare →"
+              onNext={project.selectedDesign ? goNext('optimize') : undefined}
+             nextLabel="Digital Twin →"
             />
             {optimizing && <LoadingState text="Running the optimizer…" />}
             <OptimizeModule
@@ -1030,25 +1030,6 @@ function Journey() {
               instantiating={instantiating}
               instantiateError={instantiateError}
             />
-          </div>
-        );
-
-      case 'compare':
-        return (
-          <div>
-            <StepHeader
-              stepId="compare"
-              title="Compare"
-              description="Compare the optimized designs side by side."
-              onBack={goBack('compare')}
-              onNext={project.selectedDesign ? goNext('compare') : undefined}
-              nextLabel="Digital Twin →"
-            />
-            <ErrorBanner message={instantiateError} onDismiss={() => setInstantiateError(null)} />
-            <ComingSoon title="Design comparison" owner="Optimization team">
-              {project.optimizedDesigns.length} candidate designs are ready. A side-by-side
-              comparison will appear here. For now, open a design from the Optimize step.
-            </ComingSoon>
           </div>
         );
 

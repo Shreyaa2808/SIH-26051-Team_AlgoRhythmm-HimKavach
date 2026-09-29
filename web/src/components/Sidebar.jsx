@@ -8,7 +8,6 @@ const ICONS = {
   design: 'layers',
   baseline: 'chart',
   optimize: 'flame',
-  compare: 'scale',
   twin: 'cube',
   validate: 'check',
   output: 'file',
