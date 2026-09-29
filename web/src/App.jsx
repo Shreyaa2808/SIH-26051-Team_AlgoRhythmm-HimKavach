@@ -616,6 +616,9 @@ import BenchmarkModule from './components/BenchmarkModule';
 import DigitalTwinModule from './components/DigitalTwinModule';
 import TelemetryModule from './components/TelemetryModule';
 import BlueprintModule from './components/BlueprintModule';
+import BlueprintViewer from './features/outputs/blueprint/BlueprintViewer';
+import ReportCenter from './features/outputs/reports/ReportCenter';
+import TelemetryDashboard from './features/telemetry/TelemetryDashboard';
 
 class ErrorBoundary extends Component {
   state = { error: null };
@@ -657,6 +660,8 @@ function Journey() {
   const [instantiating, setInstantiating] = useState(false);
   const [instantiateError, setInstantiateError] = useState(null);
   const [sandboxSeed, setSandboxSeed] = useState(null);
+const [outputProjectId, setOutputProjectId] = useState(null);
+const [designSelection, setDesignSelection] = useState(null);
 
   const active = step;
   const siteId = project.site?.site_id ?? null;
@@ -678,9 +683,15 @@ function Journey() {
 
   // ---------- handlers ----------
   const changeLocation = () => {
-    setDesignMode(null);
-    update({ site: null, ...clearResults }, 'Site cleared');
-  };
+  setDesignMode(null);
+  setOutputProjectId(null);
+  setDesignSelection(null);
+
+  update(
+    { site: null, ...clearResults },
+    'Site cleared'
+  );
+};
 
   const handleNewSimResult = (data) => {
     update(
@@ -727,30 +738,54 @@ function Journey() {
     setInstantiateError(null);
     try {
       const data = await fetchInstantiate({ optimizeResult: run, design, label });
-      if (target === 'blueprint') {
-        update(
-          { outputs: { ...project.outputs, blueprintProjectId: data.project_id } },
-          `Blueprint generated: ${label}`
-        );
-        setStep('output');
-      } else {
-        update(
-          {
-            selectedDesign: {
-              nonce: data.project_id,
-              design: data.design,
-              dayOfYear: run.day_of_year,
-              label,
-              optimizerComfortC: data.optimizer_comfort_c,
-              comfortDeltaC: data.comfort_delta_c,
-              reproducesOptimizer: data.reproduces_optimizer,
-              roofSnowLoadKpa: data.roof_snow_load_kpa,
-            },
-          },
-          `Design selected: ${label}`
-        );
-        setStep('twin');
-      }
+
+setOutputProjectId(data.project_id);
+
+setDesignSelection({
+  projectId: data.project_id,
+  source: 'optimizer',
+  label,
+  design: data.design,
+  context: project,
+  designDay,
+  dayOfYear: run.day_of_year,
+  optimizerComfortC: data.optimizer_comfort_c,
+  comfortDeltaC: data.comfort_delta_c,
+  reproducesOptimizer: data.reproduces_optimizer,
+});
+
+if (target === 'blueprint') {
+  update(
+    {
+      outputs: {
+        ...project.outputs,
+        blueprintProjectId: data.project_id,
+      },
+    },
+    `Blueprint generated: ${label}`
+  );
+
+  setStep('output');
+} else {
+  update(
+    {
+      selectedDesign: {
+        nonce: data.project_id,
+        design: data.design,
+        dayOfYear: run.day_of_year,
+        label,
+        optimizerComfortC: data.optimizer_comfort_c,
+        comfortDeltaC: data.comfort_delta_c,
+        reproducesOptimizer: data.reproduces_optimizer,
+        roofSnowLoadKpa: data.roof_snow_load_kpa,
+      },
+    },
+    `Design selected: ${label}`
+  );
+
+  setStep('twin');
+}
+ 
     } catch (err) {
       console.error(err);
       setInstantiateError(err.message);
@@ -1078,8 +1113,14 @@ function Journey() {
               onNext={goNext('validate')}
               nextLabel="Output →"
             />
-            <BenchmarkModule />
-            <TelemetryModule siteId={siteId} />
+           <BenchmarkModule />
+
+<TelemetryDashboard
+  projectId={outputProjectId}
+  selection={designSelection}
+  location={project.site}
+  onProjectChange={setOutputProjectId}
+/>
           </div>
         );
 
@@ -1092,7 +1133,29 @@ function Journey() {
               description="Blueprints and reports for the final design."
               onBack={goBack('output')}
             />
-            <BlueprintModule initialProjectId={project.outputs?.blueprintProjectId ?? null} />
+           <BlueprintViewer
+  projectId={
+    outputProjectId ??
+    project.outputs?.blueprintProjectId ??
+    null
+  }
+  selection={designSelection}
+  location={project.site}
+  onProjectChange={setOutputProjectId}
+  onNavigate={setStep}
+/>
+
+<ReportCenter
+  projectId={
+    outputProjectId ??
+    project.outputs?.blueprintProjectId ??
+    null
+  }
+  selection={designSelection}
+  location={project.site}
+  onProjectChange={setOutputProjectId}
+  onNavigate={setStep}
+/>
           </div>
         );
 
