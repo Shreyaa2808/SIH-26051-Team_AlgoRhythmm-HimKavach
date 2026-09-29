@@ -75,7 +75,7 @@ export default function BlueprintViewer({ projectId, selection, location, onProj
               </button>
             ))}
             <span className="op-tabs-spacer" />
-            <button className="op-btn primary-btn" onClick={() => onNavigate?.('exports')}>Download / Export Blueprint →</button>
+            {/* <button className="op-btn primary-btn" onClick={() => onNavigate?.('exports')}>Download / Export Blueprint →</button> */}
           </div>
 
           {tab === 'plan' ? (
