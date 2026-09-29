@@ -27,18 +27,20 @@ class CalibrationRunOut(BaseModel):
     ansys_wall_clock_s: float | None
     speedup_x: float | None
     note: str
+    validated: bool | None = None
 
 
 class BenchmarkSummaryOut(BaseModel):
     runs: list[CalibrationRunOut]
     n_complete: int
-    n_pending: int
+    n_awaiting_ansys: int
     mae_c: float | None
     mean_speedup_x: float | None
+    tolerance_c: float
     note: str = (
-        "Runs with status='pending' have no real ANSYS number on file yet — "
-        "their abs_error_c/speedup_x are null, not zero. mae_c/mean_speedup_x "
-        "are computed over complete runs only and are null if none are complete."
+        "Runs with status='awaiting_ansys' show our solver's result but have no "
+        "ANSYS reference yet — their abs_error_c/speedup_x/validated are null, not "
+        "zero. mae_c/mean_speedup_x are computed over complete runs only."
     )
 
 
@@ -56,11 +58,13 @@ def get_ansys_benchmark() -> BenchmarkSummaryOut:
                 ansys_wall_clock_s=r.ansys_wall_clock_s,
                 speedup_x=r.speedup_x,
                 note=r.note,
+                validated=r.validated,
             )
             for r in summary.runs
         ],
         n_complete=summary.n_complete,
-        n_pending=summary.n_pending,
+        n_awaiting_ansys=summary.n_awaiting_ansys,
         mae_c=summary.mae_c,
         mean_speedup_x=summary.mean_speedup_x,
+        tolerance_c=summary.tolerance_c,
     )

@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 
-const API = 'http://localhost:8000';
-
 export default function SandboxModule({ seed }) {
   const [form, setForm] = useState({
     unit_cost_inr: seed?.cost_inr ?? 250000,

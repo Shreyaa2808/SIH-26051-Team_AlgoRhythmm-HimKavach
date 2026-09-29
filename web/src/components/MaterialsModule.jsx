@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 
+import { API } from '../api';
 const EMPTY_FORM = {
   id: '', name: '', category: 'insulation', k: '', rho: '', cp: '',
   cost_per_m3_inr: '', cost_per_m2_inr: '', cost_note: '', citation: '',
@@ -29,7 +30,7 @@ export default function MaterialsModule() {
   const [form, setForm] = useState(EMPTY_FORM);
 
   const load = () => {
-    fetch('http://localhost:8000/materials')
+    fetch(`${API}/materials`)
       .then((res) => res.json())
       .then(setMaterials)
       .catch((err) => setError('Could not load materials: ' + err.message));
@@ -83,8 +84,8 @@ export default function MaterialsModule() {
     };
     try {
       const url = isNew
-        ? 'http://localhost:8000/materials'
-        : `http://localhost:8000/materials/${editingId}`;
+        ? `${API}/materials`
+        : `${API}/materials/${editingId}`;
       const res = await fetch(url, {
         method: isNew ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -104,7 +105,7 @@ export default function MaterialsModule() {
   const remove = async (id) => {
     if (!window.confirm(`Delete material "${id}"? This can't be undone.`)) return;
     try {
-      const res = await fetch(`http://localhost:8000/materials/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API}/materials/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         const detail = await res.json().catch(() => ({}));
         throw new Error(detail.detail || `Request failed: ${res.status}`);

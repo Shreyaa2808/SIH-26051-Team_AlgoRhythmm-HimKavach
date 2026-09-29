@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 
+import { API } from '../api';
 const VIEW_ORDER = ['plan', 'elevation_N', 'elevation_E', 'elevation_S', 'elevation_W', 'section'];
 const VIEW_LABEL = {
   plan: 'Plan View',
@@ -34,7 +35,7 @@ export default function BlueprintModule({ initialProjectId = null }) {
   }
 
   useEffect(() => {
-    fetch('http://localhost:8000/shelter/projects')
+    fetch(`${API}/shelter/projects`)
       .then((res) => res.json())
       .then((data) => setProjects(Array.isArray(data) ? data : []))
       .catch((err) => setError('Could not load saved projects: ' + err.message));
@@ -46,11 +47,11 @@ export default function BlueprintModule({ initialProjectId = null }) {
 
     (async () => {
       try {
-        const projRes = await fetch(`http://localhost:8000/shelter/projects/${requestedId}`);
+        const projRes = await fetch(`${API}/shelter/projects/${requestedId}`);
         if (!projRes.ok) throw new Error(`project fetch failed (${projRes.status})`);
         const proj = await projRes.json();
 
-        const previewRes = await fetch('http://localhost:8000/blueprint/preview', {
+        const previewRes = await fetch(`${API}/blueprint/preview`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -77,7 +78,7 @@ export default function BlueprintModule({ initialProjectId = null }) {
 
   const downloadPdf = () => {
     if (!requestedId) return;
-    window.open(`http://localhost:8000/blueprint/projects/${requestedId}/pdf`, '_blank');
+    window.open(`${API}/blueprint/projects/${requestedId}/pdf`, '_blank');
   };
 
   return (

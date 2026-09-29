@@ -281,6 +281,7 @@ button[type="submit"]:disabled, .primary-btn:disabled { opacity: 0.5; cursor: no
 }
 .pareto-tag.cheapest { background: rgba(23,166,114,0.15); color: var(--success); }
 .pareto-tag.balanced-tag { background: var(--accent-soft); color: var(--accent); }
+.pareto-tag.waiting { background: rgba(245,158,11,0.15); color: #b45309; }
 .pareto-tag.max { background: rgba(224,69,63,0.12); color: var(--error); }
 .pareto-card h3 { margin: 0 0 0.6rem; font-size: 1.05rem; }
 .pareto-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.8rem 0; }
@@ -452,3 +453,46 @@ button[type="submit"]:disabled, .primary-btn:disabled { opacity: 0.5; cursor: no
   cursor: pointer;
 }
 .use-in-sandbox-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+
+
+/* ================= PRINT REPORT ================= */
+.print-report { display: none; }
+
+@page { size: A4; margin: 0; }
+
+@media print {
+  #root { display: none !important; }          /* hide the whole app UI */
+  html, body { background: #fff !important; }
+
+  .print-report {
+    display: block;
+    padding: 16mm;
+    color: #111;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 10.5pt;
+    line-height: 1.5;
+  }
+
+  .pr-head {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 2px solid #3f7ef7; padding-bottom: 6mm; margin-bottom: 6mm;
+  }
+  .pr-eyebrow { font: 700 8pt system-ui, sans-serif; color: #3f7ef7; text-transform: uppercase; letter-spacing: .05em; }
+  .print-report h1 { font-size: 20pt; margin: 2mm 0 0; }
+  .print-report h2 { font-size: 13pt; margin: 8mm 0 3mm; border-bottom: 1px solid #ccd3e0; padding-bottom: 1mm; break-after: avoid; }
+  .print-report h3 { font-size: 11pt; margin: 0 0 1mm; }
+  .pr-date { font: 9pt system-ui, sans-serif; color: #555; }
+
+  .pr-meta { border-collapse: collapse; margin-bottom: 4mm; }
+  .pr-meta th { text-align: left; padding: 1mm 6mm 1mm 0; color: #555; font-weight: 600; }
+
+  .pr-table { width: 100%; border-collapse: collapse; font: 9.5pt system-ui, sans-serif; }
+  .pr-table th { background: #eef3fb; text-align: left; padding: 2mm; border: 1px solid #ccd3e0; }
+  .pr-table td { padding: 2mm; border: 1px solid #ccd3e0; }
+  .pr-table tr { break-inside: avoid; }
+
+  .pr-design { break-inside: avoid; margin-bottom: 4mm; }
+  .pr-design p { margin: 0; }
+  .pr-notes { font-size: 9pt; color: #444; padding-left: 5mm; }
+}

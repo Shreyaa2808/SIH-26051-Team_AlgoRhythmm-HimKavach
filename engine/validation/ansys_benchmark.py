@@ -12,9 +12,9 @@ WHAT THIS IS (and isn't):
   for every candidate.
 
   It does NOT invent ANSYS numbers. Every run in the calibration file
-  starts with status:"pending" and null ansys_* fields; a real ANSYS run
+  starts with status:"pending" (input file) and null ansys_* fields; a real ANSYS run
   has to be performed by the team and the results filled in by hand (see
-  the JSON file's _how_to_fill_in). This module reports "pending" entries
+  the JSON file's _how_to_fill_in). This module reports such entries as "awaiting_ansys"
   honestly instead of pretending they were validated -- same discipline
   as validate_uvalue.py / validate_transient.py and materials.json's
   cost_note fields (no fabricated numbers, ever).
@@ -52,12 +52,21 @@ SITE_COORDS = {
 
 CLIMATE_DIR = Path(__file__).resolve().parents[2] / "data" / "climate"
 
+# A run counts as "validated" when our min indoor temp is within this many
+# deg C of the real ANSYS result. Only evaluated once ANSYS data exists.
+VALIDATION_TOLERANCE_C = 1.0
+
+# Run status values returned to the API/UI:
+#   "complete"                 - real ANSYS number on file, error computed
+#   "awaiting_ansys"           - our result computed; ANSYS reference not run yet
+#   "skipped_no_climate_data"  - could not run our solver (see note)
+
 
 @dataclass
 class CalibrationRunResult:
     id: str
     label: str
-    status: str  # "complete" | "pending" | "skipped_no_climate_data"
+    status: str  # "complete" | "awaiting_ansys" | "skipped_no_climate_data"
     ours_min_indoor_temp_c: float | None
     ansys_min_indoor_temp_c: float | None
     abs_error_c: float | None
@@ -65,15 +74,17 @@ class CalibrationRunResult:
     ansys_wall_clock_s: float | None
     speedup_x: float | None
     note: str
+    validated: bool | None = None  # None until ANSYS data exists
 
 
 @dataclass
 class BenchmarkSummary:
     runs: list[CalibrationRunResult]
     n_complete: int
-    n_pending: int
+    n_awaiting_ansys: int
     mae_c: float | None  # None if no complete runs yet
     mean_speedup_x: float | None
+    tolerance_c: float = VALIDATION_TOLERANCE_C
 
 
 def _load_climate_for_site(site_id: str):
@@ -160,12 +171,12 @@ def run_ansys_benchmark() -> BenchmarkSummary:
 
         if run.get("status") != "complete" or ansys_min is None:
             results.append(CalibrationRunResult(
-                id=run["id"], label=run["label"], status="pending",
+                id=run["id"], label=run["label"], status="awaiting_ansys",
                 ours_min_indoor_temp_c=round(ours_min, 3),
                 ansys_min_indoor_temp_c=None, abs_error_c=None,
                 ours_wall_clock_s=round(ours_wall_clock_s, 4),
                 ansys_wall_clock_s=None, speedup_x=None,
-                note="Real ANSYS result not yet filled in — see data/validation/ansys_calibration_runs.json.",
+                note="Waiting for ANSYS reference run. Our solver's result is shown above.",
             ))
             continue
 
@@ -180,6 +191,7 @@ def run_ansys_benchmark() -> BenchmarkSummary:
             ansys_wall_clock_s=ansys_wall_clock,
             speedup_x=round(speedup, 1) if speedup else None,
             note="",
+            validated=abs_error <= VALIDATION_TOLERANCE_C,
         ))
 
     complete = [r for r in results if r.status == "complete"]
@@ -190,7 +202,7 @@ def run_ansys_benchmark() -> BenchmarkSummary:
     return BenchmarkSummary(
         runs=results,
         n_complete=len(complete),
-        n_pending=len([r for r in results if r.status == "pending"]),
+        n_awaiting_ansys=len([r for r in results if r.status == "awaiting_ansys"]),
         mae_c=mae,
         mean_speedup_x=mean_speedup,
     )
@@ -209,4 +221,4 @@ if __name__ == "__main__":
         )
     print(f"\nMAE (complete runs only): {summary.mae_c}")
     print(f"Mean speedup: {summary.mean_speedup_x}")
-    print(f"{summary.n_complete} complete, {summary.n_pending} pending real ANSYS numbers.")
+    print(f"{summary.n_complete} complete, {summary.n_awaiting_ansys} waiting for ANSYS.")

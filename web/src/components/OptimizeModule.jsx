@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import ParetoChart from './ParetoChart';
+import ParetoReport from "./ParetoReport";
 
 const money = (v) => `₹${v.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
@@ -122,8 +123,10 @@ export default function OptimizeModule({
   onExportPDF,
   onUseInSandbox,
   onOpenDesign,
-  instantiating,
+    instantiating,
   instantiateError,
+  station,
+  designDay,
 }) {
   const [picked, setPicked] = useState(null);
 
@@ -186,6 +189,14 @@ export default function OptimizeModule({
   const showSlope = data.context?.optimize_roof_slope || selected.roof_slope_deg > 0;
   const showHeight = data.context?.optimize_ceiling_height;
   const snowLimit = data.context?.max_roof_snow_load_kpa;
+  const curated = [
+  ['Cheapest', cheapest],
+  ['Balanced', balanced],
+  ['Max Performance', maxPerf],
+  ['Lowest Carbon', lowestCarbon],
+]
+  .filter(([, d]) => d)
+  .map(([label, d]) => ({ label, ...d }));
 
   return (
     <div>
@@ -197,7 +208,17 @@ export default function OptimizeModule({
         </div>
         <div className="export-btns">
           <button className="export-btn" onClick={onExportCSV}>⬇ Export CSV</button>
-          <button className="export-btn primary" onClick={onExportPDF}>📄 Download PDF</button>
+          <button
+  className="export-btn primary"
+  onClick={() => {
+    const old = document.title;
+    document.title = "HimKavach-Pareto-Report";
+    window.print();
+    document.title = old;
+  }}
+>
+  Download PDF
+</button>
         </div>
       </div>
 
@@ -283,6 +304,12 @@ export default function OptimizeModule({
       </div>
 
       {controls}
+       <ParetoReport
+        station={station}
+        designDay={designDay}
+        curated={curated}
+        frontCount={data.pareto_front.length}
+      />
     </div>
   );
 }

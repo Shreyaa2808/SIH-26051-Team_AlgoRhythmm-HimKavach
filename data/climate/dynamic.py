@@ -27,7 +27,8 @@ from pathlib import Path
 
 import requests
 
-CLIMATE_DIR = Path(__file__).resolve().parent
+from engine.runtime_paths import CLIMATE_DIR, OFFLINE_MODE
+
 REGISTRY_PATH = CLIMATE_DIR / "custom_sites.json"
 
 NASA_POWER_URL = "https://power.larc.nasa.gov/api/temporal/hourly/point"
@@ -45,6 +46,15 @@ PARAMETERS = "T2M,RH2M,WS10M,ALLSKY_SFC_SW_DWN,PS,ALLSKY_SFC_LW_DWN"
 
 # Nominatim's usage policy requires an identifying User-Agent.
 HEADERS = {"User-Agent": "HimKavach-SIH26051-prototype/1.0"}
+
+# These three sites are bundled with the desktop build and therefore remain
+# usable on a machine with no network connection.
+OFFLINE_PRESETS = {
+    "leh": {"lat": 34.1526, "lon": 77.5771, "elevation_m": 3500.0, "label": "Leh"},
+    "siachen": {"lat": 35.5, "lon": 77.0, "elevation_m": 5500.0, "label": "Siachen"},
+    "dras": {"lat": 34.4333, "lon": 75.7667, "elevation_m": 3230.0, "label": "Dras"},
+}
+
 
 
 @dataclass
@@ -162,6 +172,52 @@ def resolve_location(
       /retrofit exactly like "leh"/"siachen"/"dras" always were.
     """
     site_id = _site_id_for(lat, lon)
+
+    if OFFLINE_MODE:
+        # First prefer an already cached custom site. This allows projects
+        # previously resolved while online to keep working offline.
+        registry = _load_registry()
+        cached = registry.get(site_id)
+        climate_path = CLIMATE_DIR / f"{site_id}_{YEAR}.json"
+
+        if cached is not None and climate_path.exists():
+            elevation_m = float(cached["elevation_m"])
+            label = cached.get("label") or label or f"{lat:.4f}, {lon:.4f}"
+        else:
+            # Match the bundled presets without any network lookup.
+            matched = None
+            for preset_id, preset in OFFLINE_PRESETS.items():
+                if abs(lat - preset["lat"]) < 0.0002 and abs(lon - preset["lon"]) < 0.0002:
+                    matched = (preset_id, preset)
+                    break
+            if matched is None:
+                raise RuntimeError(
+                    "This location is not available in offline mode. "
+                    "Use a bundled site (Leh, Siachen or Dras), or resolve "
+                    "this location once while online."
+                )
+            site_id, preset = matched
+            elevation_m = preset["elevation_m"]
+            label = preset["label"]
+
+        registry = _load_registry()
+        registry[site_id] = {
+            "lat": lat,
+            "lon": lon,
+            "elevation_m": elevation_m,
+            "label": label,
+            "resolved_at": time.time(),
+        }
+        _save_registry(registry)
+
+        return ResolvedLocation(
+            site_id=site_id,
+            lat=lat,
+            lon=lon,
+            elevation_m=elevation_m,
+            label=label,
+            climate_cached=True,
+        )
 
     if elevation_m is None:
         elevation_m = get_elevation(lat, lon)

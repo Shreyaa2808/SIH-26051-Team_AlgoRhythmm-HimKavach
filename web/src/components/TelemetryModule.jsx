@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
+import { API } from '../api';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
 } from 'recharts';
 
 export default function TelemetryModule({ siteId }) {
@@ -20,7 +28,7 @@ export default function TelemetryModule({ siteId }) {
 
   try {
     const [refRes, adaptRes] = await Promise.all([
-      fetch('http://localhost:8000/simulate', {
+      fetch(`${API}/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -34,7 +42,7 @@ export default function TelemetryModule({ siteId }) {
         if (!r.ok) throw new Error(`Box A simulate failed: ${r.status}`);
         return r.json();
       }),
-      fetch('http://localhost:8000/simulate', {
+      fetch(`${API}/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

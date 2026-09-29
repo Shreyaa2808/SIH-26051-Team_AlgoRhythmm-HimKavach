@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-CLIMATE_DIR = Path(__file__).resolve().parent
+from engine.runtime_paths import CLIMATE_DIR
 
 
 @dataclass

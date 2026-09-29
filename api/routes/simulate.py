@@ -31,11 +31,10 @@ from engine.solver.thermal_solver import (
     simulate,
 )
 from engine.solver.night_gate import NightGateSchedule
+from engine.runtime_paths import CLIMATE_DIR
 
 router = APIRouter()
 _materials_lib = MaterialsLibrary()
-
-CLIMATE_DIR = Path(__file__).resolve().parents[2] / "data" / "climate"
 
 SITE_COORDS = {
     "leh": {"lat": 34.1526, "lon": 77.5771, "elevation_m": 3500},

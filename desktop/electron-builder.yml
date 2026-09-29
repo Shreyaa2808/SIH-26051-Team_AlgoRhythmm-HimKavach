@@ -1,0 +1,37 @@
+appId: in.himkavach.desktop
+productName: HimKavach
+artifactName: HimKavach-${version}-${arch}.${ext}
+
+directories:
+  output: release
+
+files:
+  - main.cjs
+  - preload.cjs
+
+extraResources:
+  - from: ../web/dist
+    to: web
+    filter:
+      - "**/*"
+  - from: ../desktop/backend-dist
+    to: backend
+    filter:
+      - "**/*"
+  - from: ../data
+    to: backend-data
+    filter:
+      - "**/*"
+
+win:
+  target:
+    - nsis
+  icon: null
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+asar: true
