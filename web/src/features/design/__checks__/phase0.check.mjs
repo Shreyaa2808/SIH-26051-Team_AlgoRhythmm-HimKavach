@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import {
   createDefaultDesignInput, deriveGeometry, deriveOperations, validateDesignInput,
-  hydrateDesignInput, newId,
+  hydrateDesignInput, newId, wallBearings, southFacingWall, orientationLongSideSouth, occupiedHours,
 } from '../designInput.js';
 import { toSimulatePayload } from '../toSimulatePayload.js';
 
@@ -64,4 +64,13 @@ const old = hydrateDesignInput({ site: { siteId: 'leh' }, shelter: { occupants: 
 assert.equal(old.shelter.occupants, 6);
 assert.equal(old.geometry.heightM, 2.4);
 
-console.log('Phase 0 checks passed');
+// Phase 2 helpers
+assert.deepEqual(wallBearings(90), { N: 90, E: 180, S: 270, W: 0 });
+assert.deepEqual(southFacingWall(0), { wall: 'S', offsetDeg: 0 });
+assert.equal(southFacingWall(90).wall, 'E');
+assert.equal(orientationLongSideSouth({ lengthM: 6, widthM: 3 }), 0);
+assert.equal(orientationLongSideSouth({ lengthM: 3, widthM: 6 }), 90);
+assert.equal(occupiedHours(18, 8), 14);
+assert.equal(occupiedHours(0, 24), 24);
+
+console.log('Phase 0-2 checks passed');

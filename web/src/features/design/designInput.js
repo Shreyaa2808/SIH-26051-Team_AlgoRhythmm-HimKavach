@@ -139,6 +139,7 @@ export function createDefaultDesignInput(overrides = {}) {
       latitude: null,
       longitude: null,
       elevationM: null,
+      climateCached: null, // from POST /location/resolve
       designDay: 'coldest_winter_night',
     },
 
@@ -230,6 +231,37 @@ export function deriveGeometry(geometry) {
     /** Gross wall area by pre-rotation label: N/S span the length, E/W the width. */
     wallAreaByLabelM2: { N: L * H, S: L * H, E: W * H, W: W * H },
   };
+}
+
+/** Compass bearing (deg) each pre-rotation wall label faces, given orientation. */
+export function wallBearings(orientationDeg) {
+  const o = num(orientationDeg);
+  return { N: (0 + o) % 360, E: (90 + o) % 360, S: (180 + o) % 360, W: (270 + o) % 360 };
+}
+
+/** Which wall label faces closest to true south, and how far off (deg). */
+export function southFacingWall(orientationDeg) {
+  const b = wallBearings(orientationDeg);
+  let best = 'N';
+  let off = 360;
+  for (const [label, bearing] of Object.entries(b)) {
+    const d = Math.abs(((bearing - 180 + 540) % 360) - 180);
+    if (d < off) { off = d; best = label; }
+  }
+  return { wall: best, offsetDeg: off };
+}
+
+/** Orientation that points the LONGER side's wall due south (0 if square). */
+export function orientationLongSideSouth(geometry) {
+  return num(geometry?.widthM) > num(geometry?.lengthM) ? 90 : 0;
+}
+
+/** Hours per day the shelter is occupied (handles overnight ranges). */
+export function occupiedHours(start, end) {
+  const s = Number(start);
+  const e = Number(end);
+  if (s === 0 && e === 24) return 24;
+  return (e - s + 24) % 24;
 }
 
 export function deriveOperations(input) {

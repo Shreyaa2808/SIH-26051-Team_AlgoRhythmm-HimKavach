@@ -86,3 +86,9 @@
   .dw-nav-label { display: none; }
   .dw-nav-item.active .dw-nav-label { display: inline; }
 }
+
+.dw-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; align-items: start; }
+.dw-plan { width: 100%; max-width: 300px; align-self: center; }
+.dw-hint { font-style: normal; font-size: 0.72rem; color: var(--text-dim); font-weight: 500; }
+.dw-derived { padding-top: 0.6rem; border-top: 1px solid rgba(150,170,210,0.3); }
+.dw-field input[type='range'] { padding: 0; accent-color: var(--accent); }

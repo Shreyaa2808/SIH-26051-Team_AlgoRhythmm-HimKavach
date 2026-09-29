@@ -1,5 +1,6 @@
 import SiteStep from './SiteStep.jsx';
 import BriefStep from './BriefStep.jsx';
+import GeometryStep from './GeometryStep.jsx';
 import PlaceholderStep from './PlaceholderStep.jsx';
 
 /**
@@ -9,7 +10,7 @@ import PlaceholderStep from './PlaceholderStep.jsx';
 export const STEPS = [
   { id: 'site', label: 'Site', section: 'site', Component: SiteStep },
   { id: 'brief', label: 'Shelter brief', section: 'shelter', Component: BriefStep },
-  { id: 'geometry', label: 'Geometry', section: 'geometry', Component: PlaceholderStep },
+  { id: 'geometry', label: 'Geometry', section: 'geometry', Component: GeometryStep },
   { id: 'envelope', label: 'Envelope', section: 'envelope', Component: PlaceholderStep },
   { id: 'openings', label: 'Openings', section: 'openings', Component: PlaceholderStep },
   { id: 'operations', label: 'Operations', section: 'operations', Component: PlaceholderStep },
