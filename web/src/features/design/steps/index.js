@@ -4,6 +4,7 @@ import GeometryStep from './GeometryStep.jsx';
 import EnvelopeStep from './EnvelopeStep.jsx';
 import OpeningsStep from './OpeningsStep.jsx';
 import OperationsStep from './OperationsStep.jsx';
+import ReviewStep from './ReviewStep.jsx';
 
 /**
  * Step registry. `section` maps to validateDesignInput().errors keys.
@@ -15,4 +16,5 @@ export const STEPS = [
   { id: 'envelope', label: 'Envelope', section: 'envelope', Component: EnvelopeStep },
   { id: 'openings', label: 'Openings', section: 'openings', Component: OpeningsStep },
   { id: 'operations', label: 'Operations', section: 'operations', Component: OperationsStep },
+  { id: 'review', label: 'Review', section: 'review', Component: ReviewStep },
 ];

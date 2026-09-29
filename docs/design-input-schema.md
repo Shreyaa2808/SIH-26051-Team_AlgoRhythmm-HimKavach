@@ -63,6 +63,7 @@ Window `sillM` is measured from the floor; doors sit on the floor. P5 (3D) and P
 | `glazingCostInr(windows, materialsById)` | glazing supply cost from `/materials`; `null` if a price is missing |
 | `resolveEnvelope(envelope)` | what will actually be simulated (`selected` / `custom` / `recommended-default`) |
 | `validateDesignInput(input)` | `{ ready, errors{section:[]}, warnings[] }` — `ready` = baseline can run |
+| `isExisting(modeOrInput)` | true when `mode === 'retrofit'` (existing-shelter flow) |
 | `toSimulatePayload(input)` | `{ payload, notes[] }` for `POST /simulate` |
 
 ## What `/simulate` can and cannot represent today
@@ -93,3 +94,11 @@ Closing these gaps is an engine/API change (not Person 2's files).
 - **P4** calls `toSimulatePayload(designInput)`, never hand-builds `/simulate` bodies.
 - **P5** reads `geometry`, `envelope`, `openings` for 3D; `envelope.*.mode === 'recommend'` means "let the optimizer choose".
 - **P6** reads everything for blueprint / reports.
+
+## Retrofit / existing-shelter mode (Phase 5)
+
+Set `designInput.mode = 'retrofit'` and the Geometry, Envelope and Openings steps relabel themselves
+("Existing geometry" etc.). The wizard passes `mode={design.mode}` to every step; each step also accepts a
+`mode` prop override. In this mode `recommend` is not allowed for envelope parts: the user must **select** a
+material or enter a **custom** one (validation error otherwise), because an existing shelter is already built.
+The Review step is shared; it retitles itself and describes the run as the retrofit baseline.

@@ -30,7 +30,7 @@ function MaterialFacts({ material, thicknessM }) {
   );
 }
 
-function PartCard({ part, env, materials, byId, update, envelope }) {
+function PartCard({ part, env, materials, byId, update, envelope, existing }) {
   const p = env[part.key];
   const set = (patch) => update('envelope', { [part.key]: patch });
   const setCustom = (patch) => set({ custom: { ...p.custom, ...patch } });
@@ -56,7 +56,7 @@ function PartCard({ part, env, materials, byId, update, envelope }) {
       </div>
 
       <div className="dw-segment" role="radiogroup" aria-label={`${part.label} material mode`}>
-        {MODES.map((m) => (
+        {MODES.filter((m) => !(existing && m.id === 'recommend')).map((m) => (
           <button key={m.id} type="button" role="radio" aria-checked={p.mode === m.id}
             className={p.mode === m.id ? 'active' : ''} onClick={() => set({ mode: m.id })}>
             {m.label}
@@ -121,7 +121,8 @@ function PartCard({ part, env, materials, byId, update, envelope }) {
 }
 
 /** Pure presentational editor: materials are passed in so it can be tested without a backend. */
-export default function EnvelopeEditor({ design, update, errors, showErrors, materials, byId }) {
+export default function EnvelopeEditor({ design, update, errors, showErrors, materials, byId, mode = design.mode }) {
+  const existing = mode === 'retrofit';
   const setAll = (mode) => {
     const patch = {};
     for (const k of ['wall', 'roof', 'floor', 'insulation']) patch[k] = { mode };
@@ -131,17 +132,19 @@ export default function EnvelopeEditor({ design, update, errors, showErrors, mat
   return (
     <div className="dw-step">
       <header className="dw-step-head">
-        <h2>Envelope</h2>
-        <p>Walls, roof, floor and insulation. You don&apos;t need to know material properties: pick a material and its data is filled in from the database.</p>
+        <h2>{existing ? 'Existing envelope' : 'Envelope'}</h2>
+        <p>{existing ? 'What the shelter is built from today. Pick the closest material, or enter its properties if it is not in the database.' : 'Walls, roof, floor and insulation. You don\'t need to know material properties: pick a material and its data is filled in from the database.'}</p>
       </header>
 
-      <div className="dw-card dw-card-row">
-        <p className="dw-muted">Not sure? Let HimKavach choose every component during optimization.</p>
-        <button type="button" className="dw-btn dw-btn-ghost" onClick={() => setAll('recommend')}>Let HimKavach choose all</button>
-      </div>
+      {!existing && (
+        <div className="dw-card dw-card-row">
+          <p className="dw-muted">Not sure? Let HimKavach choose every component during optimization.</p>
+          <button type="button" className="dw-btn dw-btn-ghost" onClick={() => setAll('recommend')}>Let HimKavach choose all</button>
+        </div>
+      )}
 
       {PARTS.map((part) => (
-        <PartCard key={part.key} part={part} env={design.envelope} envelope={design.envelope} materials={materials} byId={byId} update={update} />
+        <PartCard key={part.key} part={part} env={design.envelope} envelope={design.envelope} materials={materials} byId={byId} update={update} existing={existing} />
       ))}
 
       {showErrors && errors.map((e) => <p key={e} className="dw-error">{e}</p>)}

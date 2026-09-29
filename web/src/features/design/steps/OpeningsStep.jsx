@@ -105,7 +105,8 @@ function DoorCard({ d, index, design, update, remove, selected, onSelect }) {
   );
 }
 
-export default function OpeningsStep({ design, update, errors, showErrors }) {
+export default function OpeningsStep({ design, update, errors, showErrors, mode = design.mode }) {
+  const existing = mode === 'retrofit';
   const { byId } = useMaterials();
   const [selectedId, setSelectedId] = useState(null);
   const { windows, doors } = design.openings;
@@ -144,8 +145,8 @@ export default function OpeningsStep({ design, update, errors, showErrors }) {
   return (
     <div className="dw-step">
       <header className="dw-step-head">
-        <h2>Openings</h2>
-        <p>Windows, doors and air leakage. South-facing glass brings in winter sun; every opening also loses heat, so add only what you need.</p>
+        <h2>{existing ? 'Existing openings' : 'Openings'}</h2>
+        <p>{existing ? 'Record the windows and doors the shelter has now, and its measured or estimated air leakage.' : 'Windows, doors and air leakage. South-facing glass brings in winter sun; every opening also loses heat, so add only what you need.'}</p>
       </header>
 
       <div className="dw-card">

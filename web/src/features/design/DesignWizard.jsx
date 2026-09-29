@@ -3,7 +3,6 @@ import './DesignWizard.css';
 import {
   createDefaultDesignInput, hydrateDesignInput, mergeDesignInput, validateDesignInput,
 } from './designInput.js';
-import { toSimulatePayload } from './toSimulatePayload.js';
 import { runBaseline } from './runBaseline.js';
 import { loadDraft, saveDraft, clearDraft } from './draftStorage.js';
 import { STEPS } from './steps/index.js';
@@ -17,6 +16,7 @@ import { STEPS } from './steps/index.js';
  *  onLocationChange    (resolvedLocation) => void   keeps the app's site in sync
  *  onDesignDayChange   (id) => void
  *  onBaselineResult    (simulateResponse | null) => void
+ *  Design mode comes from value.mode ('new-build' | 'retrofit'); steps read it and relabel themselves.
  *  value / onChange    optional controlled designInput (Person 1's store, later)
  */
 function initialState(location, designDay) {
@@ -52,6 +52,7 @@ export default function DesignWizard({
   const [running, setRunning] = useState(false);
   const [runError, setRunError] = useState(null);
   const [runNotes, setRunNotes] = useState(null);
+  const [lastRun, setLastRun] = useState(null); // { data, key } — key is the design it was run for
 
   const design = value ?? internal;
   const setDesign = (next) => {
@@ -101,6 +102,7 @@ export default function DesignWizard({
     try {
       const { data, notes } = await runBaseline(design);
       setRunNotes(notes);
+      setLastRun({ data, key: JSON.stringify(design) });
       onBaselineResult?.(data);
     } catch (err) {
       setRunError(err.message);
@@ -116,6 +118,7 @@ export default function DesignWizard({
     setDesign(fresh);
     setRunNotes(null);
     setRunError(null);
+    setLastRun(null);
     setVisited(new Set([0]));
     setStepIndex(0);
     setShowErrors(false);
@@ -124,11 +127,19 @@ export default function DesignWizard({
 
   const handleLocationChange = (data) => {
     setRunNotes(null);
+    setLastRun(null);
     onBaselineResult?.(null);
     onLocationChange?.(data);
   };
 
-  const preview = useMemo(() => (validation.ready ? toSimulatePayload(design).notes : []), [design, validation.ready]);
+  // a result only counts while the design still matches what was simulated
+  const result = lastRun && lastRun.key === JSON.stringify(design) ? lastRun.data : null;
+  const goToId = (id) => {
+    const i = STEPS.findIndex((x) => x.id === id);
+    if (i < 0) return;
+    goTo(i);
+    if ((validation.errors[STEPS[i].section] || []).length) setShowErrors(true);
+  };
   const StepComponent = step.Component;
 
   return (
@@ -159,30 +170,15 @@ export default function DesignWizard({
         showErrors={showErrors}
         onLocationChange={handleLocationChange}
         onDesignDayChange={onDesignDayChange}
+        mode={design.mode}
+        validation={validation}
+        onEdit={goToId}
+        onRun={handleRun}
+        running={running}
+        runError={runError}
+        runNotes={result ? runNotes : null}
+        result={result}
       />
-
-      {isLast && (
-        <div className="dw-card">
-          <h3>Baseline simulation</h3>
-          <p className="dw-muted">
-            {validation.ready
-              ? 'All required inputs are present. Run the baseline to see how this shelter behaves.'
-              : 'Some required inputs are missing — go back to the steps marked with “!”.'}
-          </p>
-          {validation.warnings.map((w) => <p key={w} className="dw-warn">{w}</p>)}
-          {(runNotes ?? preview).length > 0 && (
-            <ul className="dw-notes">
-              {(runNotes ?? preview).map((n) => (
-                <li key={`${n.field}-${n.message}`} className={n.level}>{n.message}</li>
-              ))}
-            </ul>
-          )}
-          <button type="button" className="dw-btn dw-btn-primary" onClick={handleRun} disabled={running || !validation.ready}>
-            {running ? 'Simulating…' : 'Run baseline simulation'}
-          </button>
-          {runError && <p className="dw-error">{runError}</p>}
-        </div>
-      )}
 
       <footer className="dw-footer">
         <button type="button" className="dw-btn dw-btn-ghost" onClick={startOver}>Start over</button>

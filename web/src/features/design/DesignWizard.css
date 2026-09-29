@@ -136,3 +136,15 @@
 
 .dw-switch { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; font-weight: 700; color: var(--text-dim); cursor: pointer; }
 .dw-switch input { accent-color: var(--accent); width: 2.2rem; height: 1.1rem; cursor: pointer; }
+
+/* ---- Phase 5: review ---- */
+.dw-ready { border-left: 5px solid var(--success); }
+.dw-ready.blocked { border-left-color: var(--error); }
+.dw-checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.dw-checklist li { display: flex; align-items: flex-start; gap: 0.75rem; }
+.dw-check-icon { width: 1.4rem; height: 1.4rem; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 0.75rem; font-weight: 800; color: #fff; background: var(--success); }
+.dw-checklist li.bad .dw-check-icon { background: var(--error); }
+.dw-check-body { flex: 1; display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.88rem; }
+.dw-summary dd { font-weight: 600; font-size: 0.85rem; overflow-wrap: anywhere; }
+.dw-details summary { cursor: pointer; font-size: 0.82rem; font-weight: 600; color: var(--text-dim); }
+.dw-details pre { margin: 0.6rem 0 0; padding: 0.8rem; border-radius: 10px; background: rgba(150,170,210,0.14); font-size: 0.75rem; overflow-x: auto; }

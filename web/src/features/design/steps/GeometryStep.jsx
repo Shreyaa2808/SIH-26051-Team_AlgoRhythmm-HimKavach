@@ -8,7 +8,8 @@ const COMPASS = [
   ['0°', 0], ['45°', 45], ['90°', 90], ['135°', 135], ['180°', 180], ['225°', 225], ['270°', 270], ['315°', 315],
 ];
 
-export default function GeometryStep({ design, update, errors, showErrors }) {
+export default function GeometryStep({ design, update, errors, showErrors, mode = design.mode }) {
+  const existing = mode === 'retrofit';
   const g = design.geometry;
   const d = deriveGeometry(g);
   const south = southFacingWall(g.orientationDeg);
@@ -18,8 +19,8 @@ export default function GeometryStep({ design, update, errors, showErrors }) {
   return (
     <div className="dw-step">
       <header className="dw-step-head">
-        <h2>Geometry</h2>
-        <p>Size, shape and the direction the shelter faces. Orientation changes the solar gain, so it affects the physics, not just the drawing.</p>
+        <h2>{existing ? 'Existing geometry' : 'Geometry'}</h2>
+        <p>{existing ? 'Measure the shelter as it stands today: internal size, shape and the direction it faces. ' : 'Size, shape and the direction the shelter faces. '}Orientation changes the solar gain, so it affects the physics, not just the drawing.</p>
       </header>
 
       <div className="dw-split">
@@ -73,9 +74,11 @@ export default function GeometryStep({ design, update, errors, showErrors }) {
             The <strong>{south.wall}</strong> wall faces closest to true south
             {south.offsetDeg < 1 ? ' (due south)' : ` (${south.offsetDeg.toFixed(0)}° off)`}.
           </p>
-          <button type="button" className="dw-btn dw-btn-ghost" onClick={() => set({ orientationDeg: orientationLongSideSouth(g) })}>
-            Face the long side south
-          </button>
+          {!existing && (
+            <button type="button" className="dw-btn dw-btn-ghost" onClick={() => set({ orientationDeg: orientationLongSideSouth(g) })}>
+              Face the long side south
+            </button>
+          )}
         </div>
       </div>
 

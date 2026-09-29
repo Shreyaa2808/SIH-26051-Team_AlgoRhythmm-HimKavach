@@ -473,6 +473,9 @@ export function resolveEnvelope(envelope) {
   return out;
 }
 
+/** True when the wizard describes an existing shelter (Person 3's retrofit flow). */
+export const isExisting = (modeOrInput) => (typeof modeOrInput === 'string' ? modeOrInput : modeOrInput?.mode) === 'retrofit';
+
 /* ------------------------------- validation ------------------------------- */
 
 const inRange = (v, [lo, hi]) => Number.isFinite(Number(v)) && Number(v) >= lo && Number(v) <= hi;
@@ -513,6 +516,7 @@ export function validateDesignInput(input) {
   for (const key of ['wall', 'roof', 'floor', 'insulation']) {
     const p = d.envelope?.[key];
     if (!p || !MATERIAL_MODES.includes(p.mode)) { errors.envelope.push(`Choose how to define the ${key}.`); continue; }
+    if (d.mode === 'retrofit' && p.mode === 'recommend') { errors.envelope.push(`Existing ${key}: select the material or enter its properties.`); continue; }
     if (p.mode === 'select' && !p.materialId) errors.envelope.push(`Select a ${key} material.`);
     if (p.mode === 'custom') {
       const c = p.custom || {};
