@@ -13,7 +13,7 @@ export default function TemperatureChart({ hours, indoorTemps, outdoorTemps }) {
     <div className="chart-card">
       <h3>24-Hour Temperature Curve</h3>
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+        <LineChart data={data} margin={{ top: 10, right: 20, left: -10, bottom: 10 }}>
           <CartesianGrid stroke="rgba(150,170,210,0.25)" strokeDasharray="3 3" />
           <XAxis
             dataKey="hour"
@@ -34,7 +34,7 @@ export default function TemperatureChart({ hours, indoorTemps, outdoorTemps }) {
               fontSize: 13,
             }}
           />
-          <Legend wrapperStyle={{ fontSize: 13 }} />
+                    <Legend verticalAlign="top" height={32} wrapperStyle={{ fontSize: 13 }} />
           <Line
             type="monotone"
             dataKey="outdoor"
