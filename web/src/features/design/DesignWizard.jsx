@@ -193,6 +193,12 @@ export default function DesignWizard({
         })}
       </nav>
 
+      <div className="dw-progress-meta" aria-label={`Design progress: step ${stepIndex + 1} of ${STEPS.length}`}>
+        <span><strong>{String(stepIndex + 1).padStart(2, '0')}</strong> / {String(STEPS.length).padStart(2, '0')} · {step.label}</span>
+        <div className="dw-progress-track"><i style={{ width: `${((stepIndex + 1) / STEPS.length) * 100}%` }} /></div>
+        <span className="dw-progress-status">{validation.ready ? 'Ready to review' : 'Inputs in progress'}</span>
+      </div>
+
       <StepComponent
         stepId={step.id}
         design={design}
