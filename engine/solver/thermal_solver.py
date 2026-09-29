@@ -92,7 +92,8 @@ class SimResult:
     max_indoor_temp_c: float
     mean_ach: float
     night_gate_hours_closed: float = 0.0  # Phase 5: hours/day the gate was scheduled closed (0 if none fitted)
-
+    heat_flow_kwh: dict[str, float] = field(default_factory=dict)
+    solar_absorbed_kwh: float = 0.0
 
 def _outside_convection_coeff(wind_speed_ms: float) -> float:
     """McAdams correlation, simplified: h = 5.7 + 3.8*V (W/m2K)."""
@@ -143,6 +144,9 @@ def simulate(
     )
 
     hours_out, indoor_out, outdoor_out, ach_history = [], [], [], []
+    flow_j: dict[str, float] = {}
+    solar_j = 0.0
+
 
     for hour in range(n_hours):
         t_out_c0 = outdoor_temp_c[hour]
@@ -209,6 +213,7 @@ def simulate(
                     )
                     absorptance = 0.6  # mid-tone exterior finish, default
                     solar_gain_w = poa["total_poa"] * absorptance * area
+                    solar_j += solar_gain_w * dt_s
                     b[g_outside] += solar_gain_w
 
                     # linearized radiative loss to sky (around current node temp)
@@ -250,6 +255,14 @@ def simulate(
             b[indoor_air_idx] += infiltration_cond * t_out_k
 
             T = np.linalg.solve(A, b)
+            T_air = T[indoor_air_idx]
+            for s in geometry.surfaces:
+                g_in = node_offsets[s.name] + s.assembly.node_count() - 1
+                q_w = s.area_m2 * CONVECTION_COEFF_INSIDE * (T[g_in] - T_air)
+                key = "walls" if s.name.startswith("wall_") else s.name
+                flow_j[key] = flow_j.get(key, 0.0) + q_w * dt_s
+            flow_j["ventilation"] = flow_j.get("ventilation", 0.0) + infiltration_cond * (t_out_k - T_air) * dt_s
+            flow_j["internal"] = flow_j.get("internal", 0.0) + internal_gains.sensible_heat_w * dt_s
 
         hours_out.append(hour + 1)
         indoor_out.append(T[indoor_air_idx] - 273.15)
@@ -269,6 +282,8 @@ def simulate(
         max_indoor_temp_c=max(indoor_out),
         mean_ach=mean_ach,
         night_gate_hours_closed=geometry.night_gate.hours_closed_per_day() if geometry.night_gate else 0.0,
+        heat_flow_kwh={k: v / 3.6e6 for k, v in flow_j.items()},
+        solar_absorbed_kwh=solar_j / 3.6e6,
     )
 
 

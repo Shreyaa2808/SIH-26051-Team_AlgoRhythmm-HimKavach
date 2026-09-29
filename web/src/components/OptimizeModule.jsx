@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import ParetoChart from './ParetoChart';
 import ParetoReport from "./ParetoReport";
+import ViewSimulation from './ViewSimulation';
 
 const money = (v) => `₹${v.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
@@ -198,36 +199,61 @@ export default function OptimizeModule({
   .filter(([, d]) => d)
   .map(([label, d]) => ({ label, ...d }));
 
-  return (
+    return (
     <div>
       <div className="module-header">
         <div>
           <div className="eyebrow">Module 5 · Multi-Objective Pareto Results</div>
           <h2>Pareto-Optimized Shelter Designs</h2>
-          <p>{data.note}</p>
+          <p className="form-note" style={{ margin: '0.4rem 0 0' }}>
+            {data.pareto_front.length} optimal designs found. Click a card or a chart point to inspect it.
+          </p>
+          <details style={{ marginTop: '0.6rem' }}>
+            <summary style={{ cursor: 'pointer', fontSize: '0.85rem' }}>About these results</summary>
+            <ul
+              className="form-note"
+              style={{ maxWidth: 640, margin: '0.5rem 0 0', paddingLeft: '1.2rem', lineHeight: 1.6 }}
+            >
+              <li>Designs are ranked on comfort, cost and weight.</li>
+              <li>Carbon is shown for reference and is not used to rank designs.</li>
+              <li>A "—" for carbon means one of the materials has no carbon data on file.</li>
+              <li>The four cards below highlight the cheapest, most balanced, best-performing and lowest-carbon options.</li>
+            </ul>
+          </details>
         </div>
         <div className="export-btns">
           <button className="export-btn" onClick={onExportCSV}>⬇ Export CSV</button>
           <button
-  className="export-btn primary"
-  onClick={() => {
-    const old = document.title;
-    document.title = "HimKavach-Pareto-Report";
-    window.print();
-    document.title = old;
-  }}
->
-  Download PDF
-</button>
+            className="export-btn primary"
+            onClick={() => {
+              const old = document.title;
+              document.title = 'HimKavach-Pareto-Report';
+              window.print();
+              document.title = old;
+            }}
+          >
+            Download PDF
+          </button>
         </div>
       </div>
 
       {error && <p className="form-error">{error}</p>}
 
-      <div className="config-form" style={{ marginBottom: '1.5rem' }}>
-        <ParetoChart points={sorted} selected={selected} onSelect={setPicked} />
+      {/* 1. Recommended design cards */}
+      <div className="pareto-grid" style={{ marginBottom: '1.5rem' }}>
+        <Card tag="Cheapest" tagClass="cheapest" title="Lowest Capital Cost Design" d={cheapest}
+          selected={selected === cheapest} onSelect={setPicked} onUseInSandbox={onUseInSandbox} />
+        <Card tag="Balanced" tagClass="balanced-tag" title="Balanced Cost/Comfort Design" d={balanced}
+          selected={selected === balanced} onSelect={setPicked} onUseInSandbox={onUseInSandbox} />
+        <Card tag="Max Performance" tagClass="max" title="Maximum Comfort Design" d={maxPerf}
+          selected={selected === maxPerf} onSelect={setPicked} onUseInSandbox={onUseInSandbox} />
+        {lowestCarbon && (
+          <Card tag="Lowest Carbon" tagClass="cheapest" title="Lowest Embodied Carbon Design" d={lowestCarbon}
+            selected={selected === lowestCarbon} onSelect={setPicked} onUseInSandbox={onUseInSandbox} />
+        )}
       </div>
 
+      {/* 2. Selected design */}
       <div className="config-form" style={{ marginBottom: '1.5rem' }}>
         <div className="eyebrow">Selected design · {labelFor(selected)}</div>
         <div className="pareto-stats" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
@@ -281,7 +307,9 @@ export default function OptimizeModule({
               🏘️ Use in Bulk / Sandbox →
             </button>
           )}
+          <ViewSimulation result={data} design={selected} />
         </div>
+
         {instantiateError && <p className="form-error">{instantiateError}</p>}
         <p className="form-note" style={{ marginBottom: 0 }}>
           Opening builds a real per-wall shelter model from this design (square footprint, same
@@ -290,21 +318,13 @@ export default function OptimizeModule({
         </p>
       </div>
 
-      <div className="pareto-grid">
-        <Card tag="Cheapest" tagClass="cheapest" title="Lowest Capital Cost Design" d={cheapest}
-          selected={selected === cheapest} onSelect={setPicked} onUseInSandbox={onUseInSandbox} />
-        <Card tag="Balanced" tagClass="balanced-tag" title="Balanced Cost/Comfort Design" d={balanced}
-          selected={selected === balanced} onSelect={setPicked} onUseInSandbox={onUseInSandbox} />
-        <Card tag="Max Performance" tagClass="max" title="Maximum Comfort Design" d={maxPerf}
-          selected={selected === maxPerf} onSelect={setPicked} onUseInSandbox={onUseInSandbox} />
-        {lowestCarbon && (
-          <Card tag="Lowest Carbon" tagClass="cheapest" title="Lowest Embodied Carbon Design" d={lowestCarbon}
-            selected={selected === lowestCarbon} onSelect={setPicked} onUseInSandbox={onUseInSandbox} />
-        )}
+      {/* 3. Pareto chart (moved down) */}
+      <div className="config-form" style={{ marginBottom: '1.5rem' }}>
+        <ParetoChart points={sorted} selected={selected} onSelect={setPicked} />
       </div>
 
       {controls}
-       <ParetoReport
+      <ParetoReport
         station={station}
         designDay={designDay}
         curated={curated}
@@ -313,3 +333,4 @@ export default function OptimizeModule({
     </div>
   );
 }
+
