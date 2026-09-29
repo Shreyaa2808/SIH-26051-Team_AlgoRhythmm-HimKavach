@@ -1,0 +1,61 @@
+PHASE 6 — mount the new wizard in web/src/App.jsx  (3 small edits)
+App.jsx is Person 1's file, so this is a patch, not a replacement.
+Line numbers are approximate; search for the text.
+
+----------------------------------------------------------------------
+EDIT 1 — imports (top of file, after the ConfigForm import)
+----------------------------------------------------------------------
+    import ConfigForm from './components/ConfigForm';
+
+ADD right after it:
+
+    import { NewDesignPage, isFeatureOn } from './features/design';
+
+----------------------------------------------------------------------
+EDIT 2 — inside function App(), next to the other consts
+----------------------------------------------------------------------
+ADD (for example right under `const siteId = ...`):
+
+    const useNewWizard = isFeatureOn('newDesignWizard');
+
+----------------------------------------------------------------------
+EDIT 3 — the "Design New Shelter" branch (designMode === 'new')
+----------------------------------------------------------------------
+FIND:
+
+                <ConfigForm
+                  defaultSiteId={siteId}
+                  designDay={designDay}
+                  onResult={handleNewSimResult}
+                />
+
+REPLACE WITH:
+
+                {useNewWizard ? (
+                  <NewDesignPage
+                    location={location}
+                    designDay={designDay}
+                    onLocationChange={setLocation}
+                    onDesignDayChange={setDesignDay}
+                    onBaselineResult={handleNewSimResult}
+                    currentResult={simResult}
+                  />
+                ) : (
+                  <ConfigForm
+                    defaultSiteId={siteId}
+                    designDay={designDay}
+                    onResult={handleNewSimResult}
+                  />
+                )}
+
+Leave the `{simResult && ( <div className="results"> ... )}` block exactly as it
+is. It already renders the chart, the stats and "Optimize This Design →" for
+whichever component produced simResult.
+
+----------------------------------------------------------------------
+Turning the wizard off (falls back to the old ConfigForm)
+----------------------------------------------------------------------
+  - one visit:  http://localhost:5173/?newDesignWizard=0
+  - this browser: localStorage.setItem('himkavach.flags', '{"newDesignWizard":false}')
+  - whole build:  web/.env  ->  VITE_NEW_DESIGN_WIZARD=0
+  - back on:     ?newDesignWizard=1   (default is ON)

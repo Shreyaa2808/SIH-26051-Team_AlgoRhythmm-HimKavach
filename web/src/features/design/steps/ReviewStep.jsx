@@ -45,7 +45,7 @@ function envelopeLine(design, key, byId) {
 }
 
 export default function ReviewStep({
-  design, validation, onEdit, onRun, running, runError, runNotes, result, mode = design.mode,
+  design, validation, onEdit, onRun, running, runError, runNotes, result, stale = false, mode = design.mode,
 }) {
   const { byId } = useMaterials();
   const existing = mode === 'retrofit';
@@ -176,6 +176,7 @@ export default function ReviewStep({
         <button type="button" className="dw-btn dw-btn-primary" onClick={onRun} disabled={running || !ready}>
           {running ? 'Simulating…' : result ? 'Run baseline again' : 'Run baseline simulation'}
         </button>
+        {stale && !running && <p className="dw-warn">You changed the inputs after the last run, so that result was cleared. Run the baseline again to refresh it.</p>}
         {runError && <p className="dw-error">{runError}</p>}
         {result && !running && (
           <dl className="dw-facts dw-facts-tight">

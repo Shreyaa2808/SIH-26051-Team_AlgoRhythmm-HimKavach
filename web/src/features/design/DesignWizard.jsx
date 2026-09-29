@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import './DesignWizard.css';
 import {
   createDefaultDesignInput, hydrateDesignInput, mergeDesignInput, validateDesignInput,
@@ -17,7 +17,12 @@ import { STEPS } from './steps/index.js';
  *  onDesignDayChange   (id) => void
  *  onBaselineResult    (simulateResponse | null) => void
  *  Design mode comes from value.mode ('new-build' | 'retrofit'); steps read it and relabel themselves.
- *  value / onChange    optional controlled designInput (Person 1's store, later)
+ *  value / onChange    controlled designInput (NewDesignPage / Person 1's store). When controlled,
+ *                      the wizard does not write its own localStorage draft.
+ *  initialStep         step to open on (controlled mode)
+ *  onStepChange        (index) => void
+ *  initialRun          { data, key, notes } restored baseline, valid only while key matches the design
+ *  onRunChange         ({ data, key, notes } | null) => void
  */
 function initialState(location, designDay) {
   const draft = loadDraft();
@@ -41,18 +46,21 @@ function initialState(location, designDay) {
   return { design, step: Math.min(Math.max(step, 0), STEPS.length - 1) };
 }
 
+const clampStep = (i) => Math.min(Math.max(Number.isInteger(i) ? i : 0, 0), STEPS.length - 1);
+
 export default function DesignWizard({
   location, designDay, onLocationChange, onDesignDayChange, onBaselineResult, value, onChange,
+  initialStep = 0, onStepChange, initialRun = null, onRunChange,
 }) {
-  const [init] = useState(() => (value ? { design: value, step: 0 } : initialState(location, designDay)));
+  const [init] = useState(() => (value ? { design: value, step: clampStep(initialStep) } : initialState(location, designDay)));
   const [internal, setInternal] = useState(init.design);
   const [stepIndex, setStepIndex] = useState(init.step);
-  const [visited, setVisited] = useState(() => new Set([init.step]));
+  const [visited, setVisited] = useState(() => new Set(Array.from({ length: init.step + 1 }, (_, i) => i)));
   const [showErrors, setShowErrors] = useState(false);
   const [running, setRunning] = useState(false);
   const [runError, setRunError] = useState(null);
-  const [runNotes, setRunNotes] = useState(null);
-  const [lastRun, setLastRun] = useState(null); // { data, key } — key is the design it was run for
+  const [runNotes, setRunNotes] = useState(() => initialRun?.notes ?? null);
+  const [lastRun, setLastRun] = useState(() => (initialRun ? { data: initialRun.data, key: initialRun.key } : null)); // key = the design it was run for
 
   const design = value ?? internal;
   const setDesign = (next) => {
@@ -62,8 +70,24 @@ export default function DesignWizard({
   const update = (section, patch) => setDesign(mergeDesignInput(design, { [section]: patch }));
 
   useEffect(() => {
+    if (value) return; // controlled: the project store owns persistence
     saveDraft({ design, step: stepIndex });
-  }, [design, stepIndex]);
+  }, [value, design, stepIndex]);
+
+  // A baseline only describes the design it ran for. Once the inputs change, tell the
+  // app to drop the old result so nothing looks simulated when it isn't.
+  const designKey = JSON.stringify(design);
+  const resultCb = useRef(onBaselineResult);
+  useEffect(() => { resultCb.current = onBaselineResult; });
+  const staleSent = useRef(false);
+  useEffect(() => {
+    const stale = Boolean(lastRun) && lastRun.key !== designKey;
+    if (stale && !staleSent.current) {
+      staleSent.current = true;
+      resultCb.current?.(null);
+    }
+    if (!stale) staleSent.current = false;
+  }, [designKey, lastRun]);
 
   const validation = useMemo(() => validateDesignInput(design), [design]);
   const step = STEPS[stepIndex];
@@ -74,6 +98,7 @@ export default function DesignWizard({
     setStepIndex(i);
     setVisited((v) => new Set(v).add(i));
     setShowErrors(false);
+    onStepChange?.(i);
   };
 
   const next = () => {
@@ -102,7 +127,9 @@ export default function DesignWizard({
     try {
       const { data, notes } = await runBaseline(design);
       setRunNotes(notes);
-      setLastRun({ data, key: JSON.stringify(design) });
+      const key = JSON.stringify(design);
+      setLastRun({ data, key });
+      onRunChange?.({ data, key, notes });
       onBaselineResult?.(data);
     } catch (err) {
       setRunError(err.message);
@@ -114,7 +141,7 @@ export default function DesignWizard({
   const startOver = () => {
     if (!window.confirm('Discard this design and start again? Your location is kept.')) return;
     clearDraft();
-    const fresh = createDefaultDesignInput({ site: design.site });
+    const fresh = createDefaultDesignInput({ mode: design.mode, site: design.site });
     setDesign(fresh);
     setRunNotes(null);
     setRunError(null);
@@ -122,18 +149,22 @@ export default function DesignWizard({
     setVisited(new Set([0]));
     setStepIndex(0);
     setShowErrors(false);
+    onStepChange?.(0);
+    onRunChange?.(null);
     onBaselineResult?.(null);
   };
 
   const handleLocationChange = (data) => {
     setRunNotes(null);
     setLastRun(null);
+    onRunChange?.(null);
     onBaselineResult?.(null);
     onLocationChange?.(data);
   };
 
   // a result only counts while the design still matches what was simulated
-  const result = lastRun && lastRun.key === JSON.stringify(design) ? lastRun.data : null;
+  const result = lastRun && lastRun.key === designKey ? lastRun.data : null;
+  const stale = Boolean(lastRun) && !result;
   const goToId = (id) => {
     const i = STEPS.findIndex((x) => x.id === id);
     if (i < 0) return;
@@ -178,6 +209,7 @@ export default function DesignWizard({
         runError={runError}
         runNotes={result ? runNotes : null}
         result={result}
+        stale={stale}
       />
 
       <footer className="dw-footer">

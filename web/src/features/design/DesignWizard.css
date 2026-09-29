@@ -148,3 +148,55 @@
 .dw-summary dd { font-weight: 600; font-size: 0.85rem; overflow-wrap: anywhere; }
 .dw-details summary { cursor: pointer; font-size: 0.82rem; font-weight: 600; color: var(--text-dim); }
 .dw-details pre { margin: 0.6rem 0 0; padding: 0.8rem; border-radius: 10px; background: rgba(150,170,210,0.14); font-size: 0.75rem; overflow-x: auto; }
+
+/* ---- Phase 6: projects, autosave, field errors, crash state ---- */
+.dw-page { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.dw-projectbar {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.8rem 1.2rem;
+  background: var(--glass); border: 1px solid var(--glass-border); border-radius: 18px;
+  padding: 1rem 1.2rem; backdrop-filter: blur(20px); box-shadow: var(--card-shadow);
+}
+.dw-project-main { display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap; min-width: 0; }
+.dw-project-name { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.dw-project-name input {
+  min-width: 14rem; max-width: 100%; font-size: 1.05rem; font-weight: 700; padding: 0.35rem 0.6rem;
+  border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--text);
+}
+.dw-project-name input:hover { border-color: rgba(150,170,210,0.45); }
+.dw-project-name input:focus { border-color: var(--accent); background: #fff; outline: none; }
+
+.dw-save { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; font-weight: 700; color: var(--text-dim); padding-bottom: 0.45rem; }
+.dw-save i { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--success); display: inline-block; }
+.dw-save-saving i { background: #e0a020; }
+.dw-save-error { color: var(--error); }
+.dw-save-error i { background: var(--error); }
+
+.dw-project-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.dw-project-warn { flex-basis: 100%; }
+
+.dw-project-list {
+  flex-basis: 100%; list-style: none; margin: 0; padding: 0.4rem 0 0; border-top: 1px solid rgba(150,170,210,0.3);
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.dw-project-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap;
+  padding: 0.55rem 0.8rem; border-radius: 12px; border: 1px solid rgba(150,170,210,0.3); background: rgba(255,255,255,0.35);
+}
+.dw-project-list li.current { border-color: var(--accent); background: var(--accent-soft); }
+.dw-project-info { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.dw-project-info strong { font-size: 0.9rem; overflow-wrap: anywhere; }
+.dw-project-row-actions { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.dw-badge { font-size: 0.72rem; font-weight: 800; color: var(--accent); padding: 0.2rem 0.6rem; border-radius: 999px; background: #fff; }
+.dw-btn-danger:hover:not(:disabled) { color: var(--error); border-color: var(--error); }
+
+.dw-field input.dw-invalid { border-color: var(--error); box-shadow: 0 0 0 3px rgba(224,69,63,0.14); }
+.dw-hint-bad { color: var(--error); font-weight: 700; }
+
+.dw-crash { border-left: 5px solid var(--error); }
+.dw-crash-msg { margin: 0; padding: 0.7rem; border-radius: 10px; background: rgba(150,170,210,0.14); font-size: 0.75rem; overflow-x: auto; white-space: pre-wrap; }
+
+@media (max-width: 640px) {
+  .dw-project-name input { min-width: 0; width: 100%; }
+  .dw-project-actions { width: 100%; }
+}
