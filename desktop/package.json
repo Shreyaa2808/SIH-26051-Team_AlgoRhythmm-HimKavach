@@ -5,9 +5,10 @@
   "description": "Offline desktop shell for HimKavach",
   "main": "main.cjs",
   "scripts": {
-    "start": "electron .",
-    "dist": "electron-builder --win"
-  },
+  "start": "electron .",
+  "dist:win": "electron-builder --win",
+  "dist:mac": "electron-builder --mac --arm64"
+},
   "devDependencies": {
     "electron": "^39.2.7",
     "electron-builder": "^26.0.12"
