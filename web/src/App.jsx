@@ -1,6 +1,16 @@
-import { useState } from 'react';
-import { API } from './api';
+import { Component, useState } from 'react';
+import './project/project.css';
+import './project/shell.css';
+
+import { ProjectProvider, useProject } from './project/ProjectContext';
+import { JOURNEY } from './project/projectSchema';
+import { exportOptimizeCSV, fetchInstantiate, fetchOptimize } from './project/actions';
+
 import Sidebar from './components/Sidebar';
+import TopBar from './components/TopBar';
+import ProjectHome, { ProjectOverview } from './components/ProjectHome';
+import { ComingSoon, ErrorBanner, LoadingState, StepHeader } from './components/shared/Shared';
+
 import LocationPicker from './components/LocationPicker';
 import ConfigForm from './components/ConfigForm';
 import RetrofitForm from './components/RetrofitForm';
@@ -15,147 +25,130 @@ import DigitalTwinModule from './components/DigitalTwinModule';
 import TelemetryModule from './components/TelemetryModule';
 import BlueprintModule from './components/BlueprintModule';
 
-function App() {
-  const [activeTab, setActiveTab] = useState('siting');
+class ErrorBoundary extends Component {
+  state = { error: null };
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: '2rem', color: '#e0453f' }}>
+          <h2>Something went wrong</h2>
+          <pre style={{ whiteSpace: 'pre-wrap' }}>
+            {String(this.state.error?.stack || this.state.error)}
+          </pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
-  const [location, setLocation] = useState(null);
-  const siteId = location?.site_id ?? null;
+function Journey() {
+  const { project, step, saveState, update, setStep, close } = useProject();
 
-  const [designDay, setDesignDay] = useState('coldest_winter_night');
-  const [designMode, setDesignMode] = useState(null);
-
-  const [simResult, setSimResult] = useState(null);
-  const [retrofitResult, setRetrofitResult] = useState(null);
-  const [optimizeResult, setOptimizeResult] = useState(null);
+  // Temporary UI-only state (not saved in the project)
   const [optimizing, setOptimizing] = useState(false);
-  const [sandboxSeed, setSandboxSeed] = useState(null);
-
-  // Phase E: optimizer <-> 3D twin <-> blueprint wiring
   const [optimizeError, setOptimizeError] = useState(null);
   const [optimizeOptions, setOptimizeOptions] = useState({
     optimizeRoofSlope: true,
     optimizeCeilingHeight: false,
     groundSnowKpa: '0',
-    maxSnowKpa: ''
+    maxSnowKpa: '',
   });
   const [instantiating, setInstantiating] = useState(false);
   const [instantiateError, setInstantiateError] = useState(null);
-  const [twinSeed, setTwinSeed] = useState(null);
-  const [blueprintProjectId, setBlueprintProjectId] = useState(null);
+  const [sandboxSeed, setSandboxSeed] = useState(null);
 
-  const unlockedTabs = [
-    'siting',
-    'climate',
-    'materials',
-    'twin',
-    'optimize',
-    'sandbox',
-    'benchmark',
-    'telemetry',
-    'blueprint'
-  ];
+  const active = step;
+  const siteId = project.site?.site_id ?? null;
+  const designDay = project.scenario?.designDay ?? 'coldest_winter_night';
+  const isRetrofit = project.mode === 'retrofit';
+  const nextStep = (id) => JOURNEY[JOURNEY.findIndex((j) => j.id === id) + 1]?.id;
+  const prevStep = (id) => JOURNEY[JOURNEY.findIndex((j) => j.id === id) - 1]?.id;
+  const goNext = (id) => () => setStep(nextStep(id));
+  const goBack = (id) => () => setStep(prevStep(id));
 
-  const errorText = (body, status) => {
-    const d = body?.detail;
-    if (typeof d === 'string') return d;
-    if (d) return JSON.stringify(d);
-    return `Request failed: ${status}`;
+  const clearResults = {
+    baseline: null,
+    optimizedDesigns: [],
+    optimizerRun: null,
+    selectedDesign: null,
+    outputs: {},
+  };
+
+  // ---------- handlers ----------
+  const changeLocation = () => update({ site: null, ...clearResults }, 'Site cleared');
+
+  const handleNewSimResult = (data) => {
+    update(
+      { baseline: data, optimizedDesigns: [], optimizerRun: null, selectedDesign: null },
+      'Baseline simulation run'
+    );
+    setStep('baseline');
+  };
+
+  const handleRetrofitResult = (data) => {
+    update({ baseline: data }, 'Retrofit baseline analysed');
+    setStep('baseline');
   };
 
   const runOptimize = async () => {
-    const site = simResult?.site_id ?? siteId;
+    const site = project.baseline?.site_id ?? siteId;
     if (!site) return;
-
     setOptimizing(true);
     setOptimizeError(null);
-
+    setStep('optimize');
     try {
-      const res = await fetch(`${API}/optimize`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
+      const data = await fetchOptimize({ siteId: site, designDay, options: optimizeOptions });
+      update(
+        {
+          optimizerRun: data,
+          optimizedDesigns: data.curated_designs || data.pareto_front || [],
         },
-        body: JSON.stringify({
-          site_id: site,
-          design_day: designDay,
-          optimize_roof_slope: optimizeOptions.optimizeRoofSlope,
-          optimize_ceiling_height: optimizeOptions.optimizeCeilingHeight,
-          ground_snow_load_kpa: Number(optimizeOptions.groundSnowKpa) || 0,
-          max_roof_snow_load_kpa:
-            optimizeOptions.maxSnowKpa === ''
-              ? null
-              : Number(optimizeOptions.maxSnowKpa)
-        })
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        throw new Error(errorText(data, res.status));
-      }
-
-      setOptimizeResult(data);
+        'Optimization run'
+      );
       setInstantiateError(null);
     } catch (err) {
       console.error(err);
-      setOptimizeResult(null);
+      update({ optimizerRun: null, optimizedDesigns: [] });
       setOptimizeError(err.message);
     } finally {
       setOptimizing(false);
-      setActiveTab('optimize');
     }
   };
 
-  // Phase E: turn one Pareto point into a saved ShelterModel and open it
-  // in the 3D twin or the blueprint tab.
   const openDesign = async (design, target, label) => {
-    if (!optimizeResult) return;
-
-    const ctx = optimizeResult.context ?? {};
-
+    const run = project.optimizerRun;
+    if (!run) return;
     setInstantiating(true);
     setInstantiateError(null);
-
     try {
-      const res = await fetch(`${API}/optimize/instantiate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          site_id: optimizeResult.site_id,
-          day_of_year: optimizeResult.day_of_year,
-          design,
-          floor_area_m2: ctx.floor_area_m2 ?? 16,
-          ceiling_height_m: ctx.ceiling_height_m ?? 2.4,
-          roof_slope_deg: ctx.roof_slope_deg ?? 0,
-          sensible_heat_w: ctx.sensible_heat_w ?? 200,
-          ground_snow_load_kpa: ctx.ground_snow_load_kpa ?? 0,
-          name: `Optimizer · ${label}`
-        })
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        throw new Error(errorText(data, res.status));
-      }
-
+      const data = await fetchInstantiate({ optimizeResult: run, design, label });
       if (target === 'blueprint') {
-        setBlueprintProjectId(data.project_id);
-        setActiveTab('blueprint');
+        update(
+          { outputs: { ...project.outputs, blueprintProjectId: data.project_id } },
+          `Blueprint generated: ${label}`
+        );
+        setStep('output');
       } else {
-        setTwinSeed({
-          nonce: data.project_id,
-          design: data.design,
-          dayOfYear: optimizeResult.day_of_year,
-          label,
-          optimizerComfortC: data.optimizer_comfort_c,
-          comfortDeltaC: data.comfort_delta_c,
-          reproducesOptimizer: data.reproduces_optimizer,
-          roofSnowLoadKpa: data.roof_snow_load_kpa
-        });
-        setActiveTab('twin');
+        update(
+          {
+            selectedDesign: {
+              nonce: data.project_id,
+              design: data.design,
+              dayOfYear: run.day_of_year,
+              label,
+              optimizerComfortC: data.optimizer_comfort_c,
+              comfortDeltaC: data.comfort_delta_c,
+              reproducesOptimizer: data.reproduces_optimizer,
+              roofSnowLoadKpa: data.roof_snow_load_kpa,
+            },
+          },
+          `Design selected: ${label}`
+        );
+        setStep('twin');
       }
     } catch (err) {
       console.error(err);
@@ -165,302 +158,277 @@ function App() {
     }
   };
 
-  const handleNewSimResult = (data) => {
-    setSimResult(data);
-    setOptimizeResult(null);
-    setOptimizeError(null);
-  };
-
-  const exportOptimizeCSV = () => {
-    if (!optimizeResult) return;
-
-    const rows =
-      optimizeResult.pareto_front ||
-      optimizeResult.curated_designs ||
-      [];
-
-    if (!rows.length) return;
-
-    const headers = Object.keys(rows[0]).join(',');
-
-    const body = rows
-      .map((r) =>
-        Object.values(r)
-          .map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`)
-          .join(',')
-      )
-      .join('\n');
-
-    const blob = new Blob(
-      [headers + '\n' + body],
-      { type: 'text/csv' }
-    );
-
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'himkavach_designs.csv';
-    a.click();
-
-    URL.revokeObjectURL(url);
-  };
-
-  const exportOptimizePDF = () => {
-    window.print();
-  };
-
   const handleUseInSandbox = (d) => {
     setSandboxSeed({
       cost_inr: d.cost_inr,
       weight_kg: d.weight_kg,
       floor_area_m2: 16.0,
-      carbon_kgco2e: d.carbon_kgco2e
+      carbon_kgco2e: d.carbon_kgco2e,
     });
-
-    setActiveTab('sandbox');
+    setStep('sandbox');
   };
 
-  return (
-    <div className="app-shell">
+  // ---------- baseline results (new-build) ----------
+  const sim = project.baseline;
+  const renderBaseline = () => {
+    if (isRetrofit) return <RetrofitResults data={sim} />;
+    return (
+      <div className="results">
+        <h2>Results</h2>
+        <TemperatureChart
+          hours={sim.hours}
+          indoorTemps={sim.indoor_temp_c}
+          outdoorTemps={sim.outdoor_temp_c}
+        />
+        <p>Min indoor temp: {sim.min_indoor_temp_c.toFixed(1)}°C</p>
+        <p>Max indoor temp: {sim.max_indoor_temp_c.toFixed(1)}°C</p>
+        <p>Wall U-value: {sim.wall_u_value_wm2k.toFixed(3)} W/m²K</p>
+        <p>Safety passed: {sim.safety_passed ? '✅ Yes' : '❌ No'}</p>
+        {sim.night_gate_hours_closed > 0 && (
+          <p>🌙 Night Gate closed for {sim.night_gate_hours_closed.toFixed(0)} hours</p>
+        )}
+      </div>
+    );
+  };
 
-      <Sidebar
-        active={activeTab}
-        onChange={setActiveTab}
-        unlockedTabs={unlockedTabs}
-        siteLabel={location?.label ?? null}
-        scenarioLabel={designDay}
-      />
+  // ---------- step screens ----------
+  const renderStep = () => {
+    switch (active) {
+      case 'project':
+        return <ProjectOverview onContinue={() => setStep('site')} />;
 
-      <div className="main-content">
-
-        {/* ================= LOCATION / SITING ================= */}
-
-        {activeTab === 'siting' && (
+      case 'site':
+        return (
           <div>
-
-            {!siteId && (
+            <StepHeader
+              stepId="site"
+              title="Site"
+              description="Choose where the shelter will be built."
+              onBack={goBack('site')}
+              onNext={project.site ? goNext('site') : undefined}
+            />
+            {!project.site ? (
               <LocationPicker
-                onResolved={setLocation}
+                onResolved={(loc) => update({ site: loc }, `Site set: ${loc.label}`)}
+              />
+            ) : (
+              <div className="results hk-site-card">
+                <div>
+                  <h3 style={{ margin: 0 }}>{project.site.label}</h3>
+                  <p>
+                    Elevation:{' '}
+                    {project.site.elevation_m != null
+                      ? `${Number(project.site.elevation_m).toFixed(0)} m`
+                      : '—'}
+                  </p>
+                </div>
+                <button className="back-btn" onClick={changeLocation}>
+                  Change location
+                </button>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'shelter':
+        return (
+          <div>
+            <StepHeader
+              stepId="shelter"
+              title={isRetrofit ? 'Existing shelter' : 'Shelter'}
+              description={
+                isRetrofit
+                  ? 'Describe the existing shelter to analyse its weak points.'
+                  : 'Define the shelter and run the baseline simulation.'
+              }
+              onBack={goBack('shelter')}
+            />
+            {isRetrofit ? (
+              <RetrofitForm
+                defaultSiteId={siteId}
+                designDay={designDay}
+                onResult={handleRetrofitResult}
+              />
+            ) : (
+              <ConfigForm
+                defaultSiteId={siteId}
+                designDay={designDay}
+                onResult={handleNewSimResult}
               />
             )}
-
-            {siteId && designMode === null && (
-              <>
-                <button
-                  className="back-btn"
-                  onClick={() => {
-                    setLocation(null);
-                    setSimResult(null);
-                    setRetrofitResult(null);
-                    setOptimizeResult(null);
-                    setOptimizeError(null);
-                    setTwinSeed(null);
-                    setBlueprintProjectId(null);
-                  }}
-                >
-                  ← Change location
-                </button>
-
-                <div className="mode-select">
-
-                  <h2>
-                    Designing for {location.label}{' '}
-                    ({location.elevation_m.toFixed(0)} m)
-                    — what next?
-                  </h2>
-
-                  <button
-                    onClick={() => setDesignMode('new')}
-                  >
-                    Design New Shelter
-                  </button>
-
-                  <button
-                    onClick={() => setDesignMode('retrofit')}
-                  >
-                    Retrofit Existing Shelter
-                  </button>
-
-                </div>
-              </>
-            )}
-
-            {siteId && designMode === 'new' && (
-              <>
-                <button
-                  className="back-btn"
-                  onClick={() => setDesignMode(null)}
-                >
-                  ← Back
-                </button>
-
-                <ConfigForm
-                  defaultSiteId={siteId}
-                  designDay={designDay}
-                  onResult={handleNewSimResult}
-                />
-
-                {simResult && (
-                  <div className="results">
-
-                    <h2>Results</h2>
-
-                    <TemperatureChart
-                      hours={simResult.hours}
-                      indoorTemps={simResult.indoor_temp_c}
-                      outdoorTemps={simResult.outdoor_temp_c}
-                    />
-
-                    <p>
-                      Min indoor temp:{' '}
-                      {simResult.min_indoor_temp_c.toFixed(1)}°C
-                    </p>
-
-                    <p>
-                      Max indoor temp:{' '}
-                      {simResult.max_indoor_temp_c.toFixed(1)}°C
-                    </p>
-
-                    <p>
-                      Wall U-value:{' '}
-                      {simResult.wall_u_value_wm2k.toFixed(3)}
-                      {' '}W/m²K
-                    </p>
-
-                    <p>
-                      Safety passed:{' '}
-                      {simResult.safety_passed
-                        ? '✅ Yes'
-                        : '❌ No'}
-                    </p>
-
-                    {simResult.night_gate_hours_closed > 0 && (
-                      <p>
-                        🌙 Night Gate closed for{' '}
-                        {simResult.night_gate_hours_closed.toFixed(0)}
-                        {' '}hours
-                      </p>
-                    )}
-
-                    <button
-                      className="primary-btn"
-                      onClick={() => runOptimize()}
-                      disabled={optimizing}
-                    >
-                      {optimizing
-                        ? 'Optimizing...'
-                        : 'Optimize This Design →'}
-                    </button>
-
-                  </div>
-                )}
-              </>
-            )}
-
-            {siteId && designMode === 'retrofit' && (
-              <>
-                <button
-                  className="back-btn"
-                  onClick={() => setDesignMode(null)}
-                >
-                  ← Back
-                </button>
-
-                <RetrofitForm
-                  defaultSiteId={siteId}
-                  designDay={designDay}
-                  onResult={setRetrofitResult}
-                />
-
-                <RetrofitResults
-                  data={retrofitResult}
-                />
-              </>
-            )}
-
           </div>
-        )}
+        );
 
-        {/* ================= CLIMATE ================= */}
+      case 'design':
+        return (
+          <div>
+            <StepHeader
+              stepId="design"
+              title="Design"
+              description="Browse the material database used by the simulation."
+              onBack={goBack('design')}
+              onNext={goNext('design')}
+              nextDisabled={!project.baseline}
+              nextLabel="Baseline →"
+            />
+            <ComingSoon title="Design wizard" owner="Shelter input team">
+              Materials, openings and operations inputs will be collected here.
+            </ComingSoon>
+            <MaterialsModule />
+          </div>
+        );
 
-        {activeTab === 'climate' && (
+      case 'baseline':
+        return (
+          <div>
+            <StepHeader
+              stepId="baseline"
+              title="Baseline"
+              description="How the shelter performs before any optimization."
+              onBack={goBack('baseline')}
+              onNext={runOptimize}
+              nextLabel={optimizing ? 'Optimizing…' : 'Optimize →'}
+              nextDisabled={optimizing}
+            />
+            {sim && renderBaseline()}
+          </div>
+        );
+
+      case 'optimize':
+        return (
+          <div>
+            <StepHeader
+              stepId="optimize"
+              title="Optimize"
+              description="Find designs that balance comfort, cost, weight and carbon."
+              onBack={goBack('optimize')}
+              onNext={project.optimizedDesigns.length ? goNext('optimize') : undefined}
+              nextLabel="Compare →"
+            />
+            {optimizing && <LoadingState text="Running the optimizer…" />}
+            <OptimizeModule
+              data={project.optimizerRun}
+              error={optimizeError}
+              running={optimizing}
+              canRun={Boolean(project.baseline?.site_id ?? siteId)}
+              options={optimizeOptions}
+              onOptionsChange={setOptimizeOptions}
+              onRerun={runOptimize}
+              onExportCSV={() => exportOptimizeCSV(project.optimizerRun)}
+              onExportPDF={() => window.print()}
+              onUseInSandbox={handleUseInSandbox}
+              onOpenDesign={openDesign}
+              instantiating={instantiating}
+              instantiateError={instantiateError}
+            />
+          </div>
+        );
+
+      case 'compare':
+        return (
+          <div>
+            <StepHeader
+              stepId="compare"
+              title="Compare"
+              description="Compare the optimized designs side by side."
+              onBack={goBack('compare')}
+              onNext={project.selectedDesign ? goNext('compare') : undefined}
+              nextLabel="Digital Twin →"
+            />
+            <ErrorBanner message={instantiateError} onDismiss={() => setInstantiateError(null)} />
+            <ComingSoon title="Design comparison" owner="Optimization team">
+              {project.optimizedDesigns.length} candidate designs are ready. A side-by-side
+              comparison will appear here. For now, open a design from the Optimize step.
+            </ComingSoon>
+          </div>
+        );
+
+      case 'twin':
+        return (
+          <div>
+            <StepHeader
+              stepId="twin"
+              title="Digital Twin"
+              description="See the selected design in 3D."
+              onBack={goBack('twin')}
+              onNext={goNext('twin')}
+              nextLabel="Validate →"
+            />
+            <DigitalTwinModule siteId={siteId} seed={project.selectedDesign} />
+          </div>
+        );
+
+      case 'validate':
+        return (
+          <div>
+            <StepHeader
+              stepId="validate"
+              title="Validate"
+              description="Check the model against benchmarks and live data."
+              onBack={goBack('validate')}
+              onNext={goNext('validate')}
+              nextLabel="Output →"
+            />
+            <BenchmarkModule />
+            <TelemetryModule siteId={siteId} />
+          </div>
+        );
+
+      case 'output':
+        return (
+          <div>
+            <StepHeader
+              stepId="output"
+              title="Output"
+              description="Blueprints and reports for the final design."
+              onBack={goBack('output')}
+            />
+            <BlueprintModule initialProjectId={project.outputs?.blueprintProjectId ?? null} />
+          </div>
+        );
+
+      case 'climate':
+        return (
           <ClimateModule
             siteId={siteId}
             designDay={designDay}
-            onScenarioChange={setDesignDay}
-            onPickLocation={() => setActiveTab('siting')}
+            onScenarioChange={(v) =>
+              update({ scenario: { ...project.scenario, designDay: v } })
+            }
+            onPickLocation={() => setStep('site')}
           />
-        )}
+        );
 
-        {/* ================= MATERIALS ================= */}
+      case 'sandbox':
+        return <SandboxModule seed={sandboxSeed} />;
 
-        {activeTab === 'materials' && (
-          <MaterialsModule />
-        )}
+      default:
+        return null;
+    }
+  };
 
-        {/* ================= 3D DIGITAL TWIN ================= */}
-
-        {activeTab === 'twin' && (
-  <DigitalTwinModule
-    siteId={siteId}
-    seed={twinSeed}
-  />
-)}
-
-        {/* ================= OPTIMIZER ================= */}
-
-        {activeTab === 'optimize' && (
-          <OptimizeModule
-            data={optimizeResult}
-            error={optimizeError}
-            running={optimizing}
-            canRun={Boolean(simResult?.site_id ?? siteId)}
-            options={optimizeOptions}
-            onOptionsChange={setOptimizeOptions}
-            onRerun={() => runOptimize()}
-            onExportCSV={exportOptimizeCSV}
-            onExportPDF={exportOptimizePDF}
-            onUseInSandbox={handleUseInSandbox}
-            onOpenDesign={openDesign}
-            instantiating={instantiating}
-            instantiateError={instantiateError}
-          />
-        )}
-
-        {/* ================= SANDBOX ================= */}
-
-        {activeTab === 'sandbox' && (
-          <SandboxModule
-            seed={sandboxSeed}
-          />
-        )}
-
-        {/* ================= ANSYS ================= */}
-
-        {activeTab === 'benchmark' && (
-          <BenchmarkModule />
-        )}
-
-        {/* ================= REAL-TIME TELEMETRY ================= */}
-
-        {activeTab === 'telemetry' && (
-          <TelemetryModule
-            siteId={siteId}
-          />
-        )}
-
-        {/* ================= BLUEPRINT OUTPUT ================= */}
-
-        {activeTab === 'blueprint' && (
-          <BlueprintModule
-            initialProjectId={blueprintProjectId}
-          />
-        )}
-
+  return (
+    <div className="hk-shell">
+      <Sidebar active={active} onChange={setStep} project={project} onHome={close} />
+      <div className="hk-main">
+        <TopBar project={project} saveState={saveState} onHome={close} />
+        <div className="hk-page journey">{renderStep()}</div>
       </div>
     </div>
   );
 }
 
-export default App;
+function Shell() {
+  const { project } = useProject();
+  return project ? <Journey /> : <ProjectHome />;
+}
+
+export default function App() {
+  return (
+     <ErrorBoundary>
+      <ProjectProvider>
+        <Shell />
+      </ProjectProvider>
+    </ErrorBoundary>
+  );
+}
