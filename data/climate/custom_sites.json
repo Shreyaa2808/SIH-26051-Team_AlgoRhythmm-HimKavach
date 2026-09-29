@@ -173,5 +173,12 @@
     "elevation_m": 4128.986816,
     "label": "Samthang Chuling, Sham, Ladakh, India",
     "resolved_at": 1790689526.7031043
+  },
+  "custom_31p617_79p787": {
+    "lat": 31.61690127807063,
+    "lon": 79.787131643643,
+    "elevation_m": 4043.928955,
+    "label": "\u6258\u6797\u9547 \u0f58\u0f50\u0f7c\u0f0b\u0f63\u0fa1\u0f72\u0f44\u0f0d, \u672d\u8fbe\u53bf \u0f62\u0fa9\u0f0b\u0f58\u0f51\u0f60\u0f0b\u0f62\u0fab\u0f7c\u0f44\u0f0b\u0f0d, \u963f\u91cc\u5730\u533a \u0f58\u0f44\u0f60\u0f0b\u0f62\u0f72\u0f66\u0f0b\u0f66\u0f0b\u0f41\u0f74\u0f63\u0f0b, \u897f\u85cf\u81ea\u6cbb\u533a \u0f56\u0f7c\u0f51\u0f0b\u0f62\u0f44\u0f0b\u0f66\u0f90\u0fb1\u0f7c\u0f44\u0f0b\u0f63\u0f97\u0f7c\u0f44\u0f66\u0f0d, \u4e2d\u56fd",
+    "resolved_at": 1790693208.2607095
   }
 }
