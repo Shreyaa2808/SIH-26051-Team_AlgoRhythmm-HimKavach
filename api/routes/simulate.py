@@ -110,6 +110,8 @@ class SimulateResponse(BaseModel):
     safety_reasons: list[str]
     co_steady_state_ppm: float
     night_gate_hours_closed: float
+    heat_flow_kwh: dict[str, float] = {}
+    solar_absorbed_kwh: float = 0.0
 
 
 def _load_climate_for_site(site_id: str) -> ClimateSeries:
@@ -213,4 +215,6 @@ def run_simulation(req: SimulateRequest) -> SimulateResponse:
         safety_reasons=result.safety.reasons,
         co_steady_state_ppm=result.safety.co_steady_state_ppm,
         night_gate_hours_closed=result.night_gate_hours_closed,
+        heat_flow_kwh=result.heat_flow_kwh,
+        solar_absorbed_kwh=result.solar_absorbed_kwh,
     )
