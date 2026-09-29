@@ -105,3 +105,34 @@
 .dw-u-very-good em, .dw-u-good em { background: rgba(23,166,114,0.18); color: #0e7a53; }
 .dw-u-fair em { background: rgba(240,170,40,0.22); color: #7a5410; }
 .dw-u-poor em { background: rgba(224,69,63,0.16); color: var(--error); }
+
+/* ---- Phase 4: openings + operations ---- */
+.dw-inline { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.dw-check { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.82rem; font-weight: 600; color: var(--text-dim); cursor: pointer; }
+.dw-check input { accent-color: var(--accent); width: 1rem; height: 1rem; }
+.dw-check-box { align-self: end; padding-bottom: 0.55rem; }
+
+.dw-item { border: 1px solid rgba(150,170,210,0.35); border-radius: 14px; padding: 1rem; display: flex; flex-direction: column; gap: 0.8rem; background: rgba(255,255,255,0.35); }
+.dw-item.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.dw-item h4 { margin: 0; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem; }
+.dw-item h4 small { font-weight: 600; color: var(--text-dim); font-size: 0.75rem; }
+.dw-dot { width: 0.7rem; height: 0.7rem; border-radius: 3px; display: inline-block; }
+.dw-dot.win { background: #3f7ef7; }
+.dw-dot.door { background: #8a5a2b; }
+
+.dw-elevs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+.dw-elev { margin: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.dw-elev figcaption { display: flex; flex-direction: column; font-size: 0.8rem; }
+.dw-elev figcaption span { color: var(--text-dim); font-size: 0.72rem; }
+.dw-elev svg { width: 100%; height: auto; max-height: 200px; overflow: visible; }
+.dw-elev-wall { fill: rgba(150,170,210,0.18); stroke: var(--text-dim); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.dw-elev-ground { stroke: var(--text-dim); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.dw-elev-window, .dw-elev-door { cursor: pointer; vector-effect: non-scaling-stroke; stroke-width: 1.5; }
+.dw-elev-window { fill: rgba(63,126,247,0.35); stroke: #3f7ef7; }
+.dw-elev-door { fill: rgba(138,90,43,0.45); stroke: #8a5a2b; }
+.dw-elev-window.sel, .dw-elev-door.sel { stroke-width: 3; }
+.dw-elev-window.bad, .dw-elev-door.bad { fill: rgba(224,69,63,0.35); stroke: var(--error); }
+.dw-elev-meta { margin: 0; font-size: 0.72rem; color: var(--text-dim); }
+
+.dw-switch { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; font-weight: 700; color: var(--text-dim); cursor: pointer; }
+.dw-switch input { accent-color: var(--accent); width: 2.2rem; height: 1.1rem; cursor: pointer; }

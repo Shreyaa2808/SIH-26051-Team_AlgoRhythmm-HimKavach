@@ -13,6 +13,8 @@
  *   - one wall+insulation build-up for all surfaces (roof/floor not separate)
  *   - custom materials are not accepted
  *   - occupancy schedule is not applied (internal gain is continuous)
+ *   - window frame / operable flag, ventilation type and heater type are not
+ *     modelled (only glazing area+material, leakage area, heat W and CO rate are)
  */
 import { deriveGeometry, deriveOperations, resolveEnvelope, WALLS } from './designInput.js';
 
@@ -80,6 +82,8 @@ export function toSimulatePayload(input) {
       windowWall = null;
     }
   }
+  if (windows.length)
+    notes.push(note('info', 'openings.frames', 'Window frames, sill heights and positions, and the operable flag are kept for blueprint/3D; the solver models glazing area and type only.'));
   if ((input.openings?.doors || []).length)
     notes.push(note('info', 'openings.doors', 'Doors are not modelled by the solver yet; they are kept for blueprint/3D and the air-leakage estimate is yours to set.'));
 
@@ -88,8 +92,20 @@ export function toSimulatePayload(input) {
     notes.push(note('warn', 'shelter.schedule', 'The solver applies internal heat gain for all 24 hours; your occupancy schedule is not applied yet, so night-time results may be optimistic.'));
   if (ops.heatingW > 0)
     notes.push(note('info', 'operations.heating', 'Heater output is added to internal heat gain continuously.'));
+  if (ops.overridden)
+    notes.push(note('info', 'operations.heat', `Internal heat gain is your manual value (${round(ops.sensibleHeatW, 0)} W), not occupants × activity + loads + heater (${round(ops.computedW, 0)} W).`));
+  const vent = input.operations?.ventilationType;
+  if (vent && vent !== 'infiltration')
+    notes.push(note('info', 'operations.ventilation', `The solver has no separate ${vent === 'mechanical' ? 'mechanical' : 'natural'} ventilation; air exchange comes from the leakage area (and wind/stack effect). Raise the leakage area to represent vents.`));
+  if (input.operations?.heatingType === 'stove' && !(Number(input.operations?.coGenerationLpm) > 0))
+    notes.push(note('warn', 'operations.co', 'A stove is selected but CO generation is 0, so the CO safety check assumes no combustion gases.'));
 
   const ng = input.operations?.nightGate || {};
+  if (ng.enabled) {
+    notes.push(note('info', 'operations.nightGate', 'The Night Gate is modelled as lower air leakage during its closed hours; it adds no insulation value.'));
+    if (!(Number(ng.closedLeakageCm2) < Number(input.openings?.leakageAreaCm2)))
+      notes.push(note('warn', 'operations.nightGate', 'Night Gate closed leakage is not lower than normal leakage, so it changes nothing.'));
+  }
 
   const payload = {
     site_id: input.site.siteId,
@@ -104,9 +120,9 @@ export function toSimulatePayload(input) {
     sensible_heat_w: round(ops.sensibleHeatW, 1),
     co_generation_rate_lpm: Number(input.operations?.coGenerationLpm || 0),
     night_gate_enabled: Boolean(ng.enabled),
-    night_gate_close_hour: Number(ng.closeHour ?? 19),
-    night_gate_open_hour: Number(ng.openHour ?? 7),
-    night_gate_closed_leakage_area_cm2: Number(ng.closedLeakageCm2 ?? 60),
+    night_gate_close_hour: Number(ng.closeHour ?? 19) % 24,
+    night_gate_open_hour: Number(ng.openHour ?? 7) % 24,
+    night_gate_closed_leakage_area_cm2: Math.max(1, Number(ng.closedLeakageCm2 ?? 60)),
     orientation_deg: Number(input.geometry.orientationDeg) % 360,
     roof_slope_deg: Math.min(60, Math.max(0, Number(input.geometry.roofSlopeDeg) || 0)),
     window_wall: windowArea > 0 ? windowWall : null,

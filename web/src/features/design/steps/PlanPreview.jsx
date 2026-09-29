@@ -1,7 +1,8 @@
-import { wallBearings } from '../designInput.js';
+import { wallBearings, deriveOpenings } from '../designInput.js';
 
 /** Top-down plan of the shelter, rotated by orientation. North is always up. */
 export default function PlanPreview({ lengthM, widthM, orientationDeg, windows = [], doors = [] }) {
+  const od = deriveOpenings({ geometry: { lengthM, widthM, heightM: 2.4 }, openings: { windows, doors } });
   const L = Number(lengthM) || 1;
   const W = Number(widthM) || 1;
   const SIZE = 260;
@@ -21,23 +22,29 @@ export default function PlanPreview({ lengthM, widthM, orientationDeg, windows =
     ['W', -w / 2 - 14, 4],
   ];
 
-  // small tick marks for openings (position along wall = centered; real placement comes in Phase 4)
-  const tick = (wall, kind) => {
-    const long = wall === 'N' || wall === 'S';
-    const len = 18;
-    const x = wall === 'E' ? w / 2 : wall === 'W' ? -w / 2 : 0;
-    const y = wall === 'N' ? -h / 2 : wall === 'S' ? h / 2 : 0;
-    return (
-      <line
-        key={`${kind}-${wall}`}
-        x1={long ? x - len / 2 : x} x2={long ? x + len / 2 : x}
-        y1={long ? y : y - len / 2} y2={long ? y : y + len / 2}
-        stroke={kind === 'win' ? '#3f7ef7' : '#8a5a2b'} strokeWidth="5" strokeLinecap="round"
-      />
-    );
+  // Openings drawn at their real position and width. Offsets run counter-clockwise
+  // seen from above, starting at: N -> east end, W -> north end, S -> west end, E -> south end.
+  const segment = (wall, x0, x1) => {
+    const a = x0 * scale;
+    const b = x1 * scale;
+    if (wall === 'N') return { x1: w / 2 - a, x2: w / 2 - b, y1: -h / 2, y2: -h / 2 };
+    if (wall === 'S') return { x1: -w / 2 + a, x2: -w / 2 + b, y1: h / 2, y2: h / 2 };
+    if (wall === 'W') return { x1: -w / 2, x2: -w / 2, y1: -h / 2 + a, y2: -h / 2 + b };
+    return { x1: w / 2, x2: w / 2, y1: h / 2 - a, y2: h / 2 - b };
   };
-  const winWalls = [...new Set(windows.map((x) => x.wall))];
-  const doorWalls = [...new Set(doors.map((x) => x.wall))];
+  const marks = Object.values(od.walls).flatMap((wl) => {
+    const pos = Object.fromEntries(wl.placed.map((p) => [p.id, p]));
+    return wl.items.map((it) => {
+      const p = pos[it.id];
+      const seg = segment(wl.label, p.x0, p.x1);
+      return (
+        <line
+          key={it.id} {...seg}
+          stroke={it.kind === 'window' ? '#3f7ef7' : '#8a5a2b'} strokeWidth="6" strokeLinecap="butt"
+        />
+      );
+    });
+  });
 
   return (
     <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="dw-plan" role="img" aria-label="Plan view of the shelter with orientation">
@@ -49,8 +56,7 @@ export default function PlanPreview({ lengthM, widthM, orientationDeg, windows =
       </g>
       <g transform={`translate(${cx} ${cy}) rotate(${o})`}>
         <rect x={-w / 2} y={-h / 2} width={w} height={h} rx="3" fill="rgba(63,126,247,0.14)" stroke="var(--accent)" strokeWidth="2.5" />
-        {winWalls.map((wl) => tick(wl, 'win'))}
-        {doorWalls.map((wl) => tick(wl, 'door'))}
+        {marks}
         {labels.map(([lab, x, y]) => (
           <text
             key={lab} x={x} y={y} textAnchor="middle" fontSize="10" fontWeight="700"

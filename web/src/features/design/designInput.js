@@ -113,6 +113,11 @@ export const LIMITS = {
   doorDimM: [0.6, 3],
   leakageCm2: [0, 2000],
   sensibleHeatW: [0, 20000],
+  sillM: [0, 3],
+  heatingW: [0, 20000],
+  internalLoadsW: [0, 10000],
+  coGenerationLpm: [0, 10],
+  gateLeakageCm2: [1, 2000],
 };
 
 /* --------------------------------- factory -------------------------------- */
@@ -120,6 +125,24 @@ export const LIMITS = {
 let _idCounter = 0;
 export const newId = (prefix) =>
   `${prefix}_${Date.now().toString(36)}${(_idCounter++).toString(36)}`;
+
+/** New window. `offsetM: null` = auto-spaced along its wall. Sensible defaults; caller overrides. */
+export function createWindow(overrides = {}) {
+  return {
+    id: newId('win'), wall: 'S', widthM: 1.2, heightM: 1.0, sillM: 0.9,
+    glazingId: 'double_glazed_low_e_window', frame: 'wood', operable: false, offsetM: null,
+    ...overrides,
+  };
+}
+
+/** New door (height is capped so it always fits under the ceiling). */
+export function createDoor(overrides = {}, ceilingM = 2.4) {
+  return {
+    id: newId('door'), wall: 'N', widthM: 0.9, heightM: Math.max(0.6, Math.min(2.0, Number(ceilingM) - 0.1)),
+    type: 'insulated', offsetM: null,
+    ...overrides,
+  };
+}
 
 const envelopePart = (key) => ({
   mode: 'recommend',
@@ -181,6 +204,7 @@ export function createDefaultDesignInput(overrides = {}) {
       heatingW: 0,
       ventilationType: 'infiltration',
       internalLoadsW: 0, // lighting + equipment
+      sensibleHeatOverrideW: null, // null = computed (occupants x activity + loads + heater)
       coGenerationLpm: 0,
       nightGate: { enabled: false, closeHour: 19, openHour: 7, closedLeakageCm2: 60 },
     },
@@ -330,12 +354,107 @@ export function deriveOperations(input) {
   const metabolicW = occupants * act.wPerPerson;
   const internalW = num(input?.operations?.internalLoadsW);
   const heatingW = num(input?.operations?.heatingW);
+  const computedW = metabolicW + internalW + heatingW;
+  const ov = input?.operations?.sensibleHeatOverrideW;
+  const overridden = ov !== null && ov !== undefined && ov !== '' && Number.isFinite(Number(ov));
   return {
     metabolicW,
     internalLoadsW: internalW,
     heatingW,
-    sensibleHeatW: metabolicW + internalW + heatingW,
+    computedW,
+    overridden,
+    sensibleHeatW: overridden ? Number(ov) : computedW,
   };
+}
+
+/* -------------------------------- openings -------------------------------- */
+
+export const WALL_NAMES = { N: 'North', E: 'East', S: 'South', W: 'West' };
+
+/** Length (m) of the wall carrying a pre-rotation label: N/S span the length, E/W the width. */
+export function wallLengthM(geometry, label) {
+  return num(label === 'N' || label === 'S' ? geometry?.lengthM : geometry?.widthM);
+}
+
+const hasOffset = (it) => it.offsetM !== null && it.offsetM !== undefined && it.offsetM !== '' && Number.isFinite(Number(it.offsetM));
+
+/**
+ * Place openings along ONE wall. Positions are measured in metres from the
+ * wall's LEFT edge as seen from OUTSIDE the shelter (counter-clockwise when
+ * viewed from above). Items with a numeric `offsetM` stay where the user put
+ * them; the rest are packed with equal gaps. Reports overlaps and items that
+ * stick out past the wall ends.
+ */
+export function layoutWall(wallLenM, items) {
+  const len = num(wallLenM);
+  const autos = items.filter((it) => !hasOffset(it));
+  const gap = Math.max(0, (len - autos.reduce((a, it) => a + num(it.widthM), 0)) / (autos.length + 1));
+  let cursor = gap;
+  const placed = items.map((it) => {
+    const w = num(it.widthM);
+    let x0;
+    if (hasOffset(it)) x0 = Number(it.offsetM);
+    else { x0 = cursor; cursor += w + gap; }
+    return { id: it.id, x0, x1: x0 + w, auto: !hasOffset(it) };
+  });
+  const EPS = 1e-6;
+  const sorted = placed.slice().sort((a, b) => a.x0 - b.x0);
+  const overlaps = [];
+  for (let i = 1; i < sorted.length; i++)
+    if (sorted[i - 1].x1 > sorted[i].x0 + EPS) overlaps.push([sorted[i - 1].id, sorted[i].id]);
+  const outOfBounds = placed.filter((p) => p.x0 < -EPS || p.x1 > len + EPS).map((p) => p.id);
+  return { placed, overlaps, outOfBounds };
+}
+
+/** Per-wall openings summary + placement, plus totals. Pure; no materials needed. */
+export function deriveOpenings(input) {
+  const g = input?.geometry || {};
+  const H = num(g.heightM);
+  const wins = input?.openings?.windows || [];
+  const drs = input?.openings?.doors || [];
+  const walls = {};
+  let windowM2 = 0;
+  let doorM2 = 0;
+  for (const label of WALLS) {
+    const lengthM = wallLengthM(g, label);
+    const items = [
+      ...drs.filter((d) => d.wall === label).map((d) => ({ ...d, kind: 'door' })),
+      ...wins.filter((w) => w.wall === label).map((w) => ({ ...w, kind: 'window' })),
+    ];
+    const layout = layoutWall(lengthM, items);
+    const wArea = items.filter((i) => i.kind === 'window').reduce((a, i) => a + num(i.widthM) * num(i.heightM), 0);
+    const dArea = items.filter((i) => i.kind === 'door').reduce((a, i) => a + num(i.widthM) * num(i.heightM), 0);
+    windowM2 += wArea;
+    doorM2 += dArea;
+    const grossM2 = lengthM * H;
+    walls[label] = {
+      label, lengthM, heightM: H, grossM2, windowM2: wArea, doorM2: dArea,
+      openingsM2: wArea + dArea,
+      openingRatio: grossM2 > 0 ? (wArea + dArea) / grossM2 : 0,
+      netOpaqueM2: Math.max(0, grossM2 - wArea - dArea),
+      items, ...layout,
+    };
+  }
+  const grossAll = Object.values(walls).reduce((a, w) => a + w.grossM2, 0);
+  return {
+    walls,
+    windowM2,
+    doorM2,
+    windowToWallRatio: grossAll > 0 ? windowM2 / grossAll : 0,
+    netOpaqueWallM2: Math.max(0, grossAll - windowM2 - doorM2),
+  };
+}
+
+/** Glazing supply cost (INR) from materials' cost_per_m2_inr; null if any glazing type has no price. */
+export function glazingCostInr(windows, materialsById) {
+  if (!windows?.length) return 0;
+  let total = 0;
+  for (const w of windows) {
+    const price = materialsById?.[w.glazingId]?.cost_per_m2_inr;
+    if (price == null) return null;
+    total += price * num(w.widthM) * num(w.heightM);
+  }
+  return total;
 }
 
 /** Resolve each envelope component to what will actually be simulated. */
@@ -409,33 +528,55 @@ export function validateDesignInput(input) {
 
   // Openings
   const o = d.openings || {};
+  const H = num(g.heightM);
   if (!inRange(o.leakageAreaCm2, LIMITS.leakageCm2)) errors.openings.push('Leakage area must be 0–2000 cm².');
-  for (const w of o.windows || []) {
-    if (!WALLS.includes(w.wall)) errors.openings.push('Every window needs a wall (N/E/S/W).');
+  (o.windows || []).forEach((w, i) => {
+    const n = `Window ${i + 1}`;
+    if (!WALLS.includes(w.wall)) errors.openings.push(`${n}: choose a wall (N/E/S/W).`);
     if (!inRange(w.widthM, LIMITS.windowDimM) || !inRange(w.heightM, LIMITS.windowDimM))
-      errors.openings.push('Window width/height must be 0.2–4 m.');
-    if (!GLAZING_IDS.includes(w.glazingId)) errors.openings.push('Every window needs a glazing type.');
-  }
-  for (const dr of o.doors || []) {
-    if (!WALLS.includes(dr.wall)) errors.openings.push('Every door needs a wall (N/E/S/W).');
+      errors.openings.push(`${n}: width and height must be 0.2–4 m.`);
+    const sill = w.sillM ?? 0; // older drafts have no sill; treat as floor level
+    if (!inRange(sill, LIMITS.sillM)) errors.openings.push(`${n}: sill height must be 0–3 m.`);
+    else if (num(sill) + num(w.heightM) > H + 1e-9)
+      errors.openings.push(`${n}: sill + height (${(num(sill) + num(w.heightM)).toFixed(2)} m) is taller than the wall (${H} m).`);
+    if (!GLAZING_IDS.includes(w.glazingId)) errors.openings.push(`${n}: choose a glazing type.`);
+  });
+  (o.doors || []).forEach((dr, i) => {
+    const n = `Door ${i + 1}`;
+    if (!WALLS.includes(dr.wall)) errors.openings.push(`${n}: choose a wall (N/E/S/W).`);
     if (!inRange(dr.widthM, LIMITS.doorDimM) || !inRange(dr.heightM, LIMITS.doorDimM))
-      errors.openings.push('Door width/height must be 0.6–3 m.');
+      errors.openings.push(`${n}: width and height must be 0.6–3 m.`);
+    else if (num(dr.heightM) > H + 1e-9) errors.openings.push(`${n}: height ${num(dr.heightM)} m is taller than the wall (${H} m).`);
+  });
+  const od = deriveOpenings(d);
+  for (const wl of WALLS) {
+    const w = od.walls[wl];
+    if (w.openingsM2 > w.grossM2 * 0.8) errors.openings.push(`Openings on the ${wl} wall take over 80% of its area.`);
+    if (w.outOfBounds.length) errors.openings.push(`An opening on the ${wl} wall sticks out past the wall ends — reduce its size or position.`);
+    if (w.overlaps.length) errors.openings.push(`Openings overlap on the ${wl} wall — move one or use Auto-space.`);
   }
-  // Openings must physically fit their wall
-  const byWall = { N: 0, E: 0, S: 0, W: 0 };
-  for (const it of [...(o.windows || []), ...(o.doors || [])])
-    if (byWall[it.wall] !== undefined) byWall[it.wall] += num(it.widthM) * num(it.heightM);
-  for (const wl of WALLS)
-    if (byWall[wl] > geo.wallAreaByLabelM2[wl] * 0.8)
-      errors.openings.push(`Openings on the ${wl} wall take over 80% of its area.`);
 
   // Operations
   const ops = deriveOperations(d);
-  if (!inRange(ops.sensibleHeatW, LIMITS.sensibleHeatW)) errors.operations.push('Internal heat gain is out of range.');
-  const ng = d.operations?.nightGate;
-  if (ng?.enabled && (ng.closeHour < 0 || ng.closeHour > 24 || ng.openHour < 0 || ng.openHour > 24))
-    errors.operations.push('Night Gate hours must be between 0 and 24.');
-  if (d.operations?.heatingType === 'none' && ops.heatingW > 0) warnings.push('Heating power is set but heating type is "No heating".');
+  const op = d.operations || {};
+  if (!inRange(ops.sensibleHeatW, LIMITS.sensibleHeatW)) errors.operations.push('Internal heat gain must be 0–20,000 W.');
+  if (!inRange(op.heatingW ?? 0, LIMITS.heatingW)) errors.operations.push('Heater output must be 0–20,000 W.');
+  if (!inRange(op.internalLoadsW ?? 0, LIMITS.internalLoadsW)) errors.operations.push('Lighting and equipment load must be 0–10,000 W.');
+  if (!inRange(op.coGenerationLpm ?? 0, LIMITS.coGenerationLpm)) errors.operations.push('CO generation must be 0–10 L/min.');
+  const ng = op.nightGate;
+  if (ng?.enabled) {
+    const hourOk = (h) => Number.isFinite(Number(h)) && Number(h) >= 0 && Number(h) < 24;
+    if (!hourOk(ng.closeHour) || !hourOk(ng.openHour)) errors.operations.push('Night Gate close and open hours must be 0–23.');
+    if (!inRange(ng.closedLeakageCm2, LIMITS.gateLeakageCm2)) errors.operations.push('Night Gate closed leakage must be 1–2000 cm² (a sealed shelter still needs some air).');
+    else if (num(ng.closedLeakageCm2) >= num(o.leakageAreaCm2))
+      warnings.push('Night Gate closed leakage is not lower than the normal leakage area, so the gate will have no effect.');
+    if (ng.closeHour === ng.openHour) warnings.push('Night Gate close and open hours are equal, so it never closes.');
+  }
+  if (op.heatingType === 'none' && ops.heatingW > 0) warnings.push('Heating power is set but heating type is "No heating".');
+  if (op.heatingType === 'stove' && !(num(op.coGenerationLpm) > 0))
+    warnings.push('A stove burns fuel and releases CO. CO generation is 0, so the safety check assumes none. Enter an estimate if the stove is not flued outdoors.');
+
+  for (const k of Object.keys(errors)) errors[k] = [...new Set(errors[k])];
 
   const ready = Object.values(errors).every((a) => a.length === 0);
   return { ready, errors, warnings };
