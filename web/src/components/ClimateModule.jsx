@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import TemperatureChart from './TemperatureChart';
 import DesignDayPicker from './DesignDayPicker';
+import HeatFlowPanel from './HeatFlowPanel';
 
 import { API } from '../api';
 export default function ClimateModule({ siteId, designDay, onScenarioChange, onPickLocation }) {
@@ -104,12 +105,23 @@ export default function ClimateModule({ siteId, designDay, onScenarioChange, onP
       {error && <p className="form-error">Could not load preview: {error}</p>}
       {loading && <p className="form-note">Loading climate data...</p>}
 
-      {preview && (
-        <TemperatureChart
-          hours={preview.hours}
-          indoorTemps={preview.indoor_temp_c}
-          outdoorTemps={preview.outdoor_temp_c}
-        />
+           {preview && (
+        <>
+          <TemperatureChart
+            hours={preview.hours}
+            indoorTemps={preview.indoor_temp_c}
+            outdoorTemps={preview.outdoor_temp_c}
+          />
+          <HeatFlowPanel
+            heatFlow={preview.heat_flow_kwh}
+            indoorTemps={preview.indoor_temp_c}
+            solarKwh={preview.solar_absorbed_kwh}
+            safetyPassed={preview.safety_passed}
+            safetyReasons={preview.safety_reasons}
+            coPpm={preview.co_steady_state_ppm}
+            meanAch={preview.mean_ach}
+          />
+        </>
       )}
     </div>
   );

@@ -1,0 +1,115 @@
+/* Person 1: project system + journey styles. Reuses the theme variables from index.css. */
+
+/* ---- Sidebar additions ---- */
+
+.sidebar-nav { overflow: hidden; min-height: 0; gap: 0.1rem; }
+.sidebar-nav .sidebar-tab { padding: 0.45rem 0.7rem; }
+.sidebar { padding: 1rem 1rem; overflow: hidden; }
+.sidebar-brand { margin-bottom: 0.8rem; }
+.sidebar-status { margin-bottom: 0.8rem; }
+.sidebar-project-name {
+  font-weight: 700; color: var(--text); margin-bottom: 0.4rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sidebar-group-label {
+  margin: 0.9rem 0 0.2rem 0.4rem; font-size: 0.7rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-dim);
+}
+.hk-save { margin-left: auto; font-size: 0.72rem; }
+.hk-save-saved { color: var(--success); }
+.hk-save-saving { color: var(--text-dim); }
+.hk-save-error { color: var(--error); font-weight: 600; }
+.hk-home-btn {
+  display: block; width: 100%; margin-bottom: 0.6rem; padding: 0.45rem;
+  background: transparent; border: 1px solid var(--glass-border); color: var(--text-dim);
+  border-radius: 8px; cursor: pointer;
+}
+.hk-home-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ---- Step header ---- */
+.hk-step-header { margin-bottom: 1.25rem; }
+.hk-step-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 1rem; margin-bottom: 1rem;
+}
+.hk-step-title h2 { margin: 0.1rem 0 0.25rem; font-size: 1.4rem; }
+.hk-step-title p { margin: 0; color: var(--text-dim); }
+.hk-step-kicker { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+.hk-nav-btn, .hk-nav-spacer { width: 150px; height: 42px; flex-shrink: 0; box-sizing: border-box; }
+.hk-nav-btn {
+  background: var(--glass); border: 1px solid var(--glass-border); color: var(--text);
+  border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+  box-shadow: var(--card-shadow); transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.hk-nav-btn:hover:not(:disabled) { background: #3f7ef7; border-color: #3f7ef7; color: #fff; }
+.hk-nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---- Loading / error ---- */
+.hk-loading { display: flex; align-items: center; gap: 0.7rem; color: var(--text-dim); padding: 1rem 0; }
+.hk-spinner {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 3px solid var(--accent-soft); border-top-color: var(--accent);
+  animation: hk-spin 0.8s linear infinite;
+}
+@keyframes hk-spin { to { transform: rotate(360deg); } }
+.hk-error {
+  display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;
+  padding: 0.7rem 1rem; border-radius: 12px;
+  background: rgba(224,69,63,0.1); border: 1px solid rgba(224,69,63,0.4); color: var(--error);
+}
+.hk-error-text { flex: 1; }
+.hk-error button { background: transparent; border: 1px solid currentColor; color: inherit; border-radius: 6px; cursor: pointer; padding: 0.2rem 0.6rem; }
+
+/* ---- Coming soon placeholder ---- */
+.hk-coming h3 { margin-top: 0; }
+.hk-owner { font-size: 0.75rem; color: var(--accent); font-weight: 600; }
+
+/* ---- Dashboard ---- */
+.hk-dash-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.hk-dash-head h1 { margin: 0 0 0.25rem; font-size: 1.6rem; }
+.hk-dash-head p { margin: 0; color: var(--text-dim); }
+.hk-new-btn { margin-top: 0; padding: 0.7rem 1.3rem; }
+.hk-field { display: flex; flex-direction: column; gap: 0.35rem; font-weight: 600; margin: 1rem 0; }
+.hk-field input, .hk-rename input {
+  padding: 0.65rem 0.8rem; border-radius: 8px; border: 1px solid var(--glass-border);
+  background: rgba(255,255,255,0.8); font-size: 1rem;
+}
+.hk-mode-row { display: flex; gap: 0.8rem; margin-bottom: 1.2rem; }
+.hk-mode-card {
+  flex: 1; display: flex; flex-direction: column; gap: 0.2rem; text-align: left;
+  padding: 0.9rem 1rem; border-radius: 14px; cursor: pointer;
+  background: var(--glass); border: 2px solid var(--glass-border); color: var(--text);
+}
+.hk-mode-card span { color: var(--text-dim); font-size: 0.85rem; }
+.hk-mode-card.selected { border-color: var(--accent); background: var(--accent-soft); }
+
+.hk-project-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;
+  padding: 0.85rem 0; border-top: 1px solid var(--glass-border);
+}
+.hk-project-main { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.hk-project-main small { color: var(--text-dim); }
+.hk-project-actions, .hk-rename { display: flex; gap: 0.4rem; align-items: center; }
+.hk-project-actions button, .hk-rename button {
+  padding: 0.4rem 0.8rem; border-radius: 8px; cursor: pointer;
+  background: var(--glass); border: 1px solid var(--glass-border); color: var(--text-dim);
+}
+.hk-project-actions .primary-btn { color: #fff; }
+.hk-link { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; }
+
+/* ---- History timeline ---- */
+.hk-timeline { list-style: none; margin: 0; padding: 0; }
+.hk-timeline li { display: flex; gap: 0.7rem; padding: 0.35rem 0; }
+.hk-timeline li > div { display: flex; flex-direction: column; }
+.hk-timeline small { color: var(--text-dim); }
+.hk-tl-dot { width: 10px; height: 10px; margin-top: 0.4rem; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+/* ---- Site summary card ---- */
+.hk-site-card { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+@media (max-height: 820px) {
+  .sidebar-brand { margin-bottom: 0.4rem; }
+  .sidebar-logo { max-height: 48px; }
+  .sidebar-nav .sidebar-tab { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
+  .sidebar-group-label { margin-top: 0.4rem; }
+  .sidebar-status { padding: 0.5rem 0.7rem; margin-bottom: 0.5rem; }
+}
