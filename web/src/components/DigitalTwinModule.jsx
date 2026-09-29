@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 
 import { API } from '../api';
@@ -73,7 +73,7 @@ function designInputToVisualModel(input) {
       structural_material_id: part('roof', 0.12).materialId || 'recommended-roof',
       insulation_material_id: part('insulation', 0.1).materialId || null,
       slope_deg: Number(g.roofSlopeDeg || 0),
-      orientation_deg: 0,
+      orientation_deg: 180,
     },
   };
 }
@@ -330,40 +330,111 @@ function Roof({
   height,
   slopeDeg,
   orientationDeg,
+  buildingOrientationDeg = 0,
   color,
 }) {
-  const slope = Math.max(0, Number(slopeDeg) || 0);
-  const halfWidth = width / 2;
-  const rise = halfWidth * Math.tan((slope * Math.PI) / 180);
-  const panelRun = Math.max(halfWidth, Math.sqrt(halfWidth ** 2 + rise ** 2));
-  const panelAngle = Math.atan2(rise, halfWidth);
-  const baseY = height + (slope === 0 ? 0.08 : 0);
+  // Symmetric gable roof: two equal roof planes meeting at a ridge,
+  // forming the requested inverted-V profile across the shelter width.
+  const slope = Math.min(60, Math.max(0, Number(slopeDeg) || 0));
+  const slopeRad = (slope * Math.PI) / 180;
+  const halfSpan = Math.max(0.05, width / 2);
+  const rise = halfSpan * Math.tan(slopeRad);
+  const panelRun = halfSpan / Math.max(0.35, Math.cos(slopeRad));
+  const thickness = 0.14;
+  const baseY = height;
+  const buildingRad = (Number(buildingOrientationDeg || 0) * Math.PI) / 180;
 
-  if (slope < 1) {
+  if (slope < 0.5) {
     return (
-      <mesh position={[0, baseY + 0.06, 0]} rotation={[0, (orientationDeg * Math.PI) / 180, 0]}>
-        <boxGeometry args={[length * 1.05, 0.12, width * 1.05]} />
-        <meshStandardMaterial color={color} roughness={0.62} />
-      </mesh>
+      <group rotation={[0, buildingRad, 0]}>
+        <mesh position={[0, baseY + thickness / 2, 0]}>
+          <boxGeometry args={[length * 1.06, thickness, width * 1.06]} />
+          <meshStandardMaterial color={color} roughness={0.62} />
+        </mesh>
+      </group>
     );
   }
 
   return (
-    <group rotation={[0, (orientationDeg * Math.PI) / 180, 0]}>
-      <mesh position={[0, baseY + rise / 2, -halfWidth / 2]} rotation={[panelAngle, 0, 0]}>
-        <boxGeometry args={[length * 1.06, 0.12, panelRun * 1.04]} />
+    <group rotation={[0, buildingRad, 0]}>
+      {/* Left roof plane: low at the left eave, high at the center ridge. */}
+      <mesh
+        position={[0, baseY + rise / 2, -halfSpan / 2]}
+        rotation={[-slopeRad, 0, 0]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry
+          args={[length * 1.06, thickness, panelRun * 1.04]}
+        />
         <meshStandardMaterial color={color} roughness={0.62} />
       </mesh>
-      <mesh position={[0, baseY + rise / 2, halfWidth / 2]} rotation={[-panelAngle, 0, 0]}>
-        <boxGeometry args={[length * 1.06, 0.12, panelRun * 1.04]} />
+
+      {/* Right roof plane: high at the center ridge, low at the right eave. */}
+      <mesh
+        position={[0, baseY + rise / 2, halfSpan / 2]}
+        rotation={[slopeRad, 0, 0]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry
+          args={[length * 1.06, thickness, panelRun * 1.04]}
+        />
         <meshStandardMaterial color={color} roughness={0.62} />
-      </mesh>
-      <mesh position={[0, height + rise + 0.02, 0]}>
-        <boxGeometry args={[length * 1.06, 0.14, 0.16]} />
-        <meshStandardMaterial color="#4a3b2b" roughness={0.7} />
       </mesh>
     </group>
   );
+}
+
+function CameraRig({ preset, model, controlsRef }) {
+  const { camera } = useThree();
+
+  useEffect(() => {
+    if (!model) return;
+
+    const L = Math.max(2, Number(model.length_m) || 4);
+    const W = Math.max(2, Number(model.width_m) || 4);
+    const H = Math.max(1.5, Number(model.ceiling_height_m) || 2.4);
+    const span = Math.max(L, W);
+    const distance = Math.max(6, span * 1.75);
+    const targetY = H * 0.42;
+
+    const positions = {
+      Iso: [distance, Math.max(3.8, H * 1.55), distance],
+      N: [0, Math.max(2.5, H * 0.72), distance],
+      S: [0, Math.max(2.5, H * 0.72), -distance],
+      E: [distance, Math.max(2.5, H * 0.72), 0],
+      W: [-distance, Math.max(2.5, H * 0.72), 0],
+      Plan: [0, Math.max(7, distance * 1.55), 0.01],
+    };
+
+    const [x, y, z] = positions[preset] || positions.Iso;
+    camera.position.set(x, y, z);
+    camera.near = 0.1;
+    camera.far = 1000;
+    camera.updateProjectionMatrix();
+    camera.lookAt(0, targetY, 0);
+
+    if (controlsRef.current) {
+      controlsRef.current.target.set(0, targetY, 0);
+      controlsRef.current.update();
+    }
+  }, [preset, model, camera, controlsRef]);
+
+  return null;
+}
+
+function solarOrientationColor(cardinal, orientationDeg = 0) {
+  const baseBearing = { N: 0, E: 90, S: 180, W: 270 }[cardinal] ?? 0;
+  const bearing = (baseBearing + Number(orientationDeg || 0)) % 360;
+  // This is an orientation view, not a simulated irradiance value:
+  // south-facing surfaces are emphasized for winter solar-gain review.
+  const southness = Math.max(
+    0,
+    (Math.cos(((bearing - 180) * Math.PI) / 180) + 1) / 2
+  );
+  const lightness = 70 - southness * 22;
+  return `hsl(34, ${45 + southness * 30}%, ${lightness}%)`;
 }
 
 function HeatLegend() {
@@ -576,6 +647,14 @@ export default function DigitalTwinModule({
 
   const [cutaway, setCutaway] =
     useState(null);
+
+  const [cameraPreset, setCameraPreset] =
+    useState('Iso');
+
+  const [inspectorTab, setInspectorTab] =
+    useState('Properties');
+
+  const controlsRef = useRef(null);
 
   const [showConfig, setShowConfig] =
     useState(false);
@@ -924,6 +1003,7 @@ export default function DigitalTwinModule({
     );
   }, [
     displayDesign,
+    design,
     materials,
     surfaceByName,
   ]);
@@ -1602,13 +1682,66 @@ export default function DigitalTwinModule({
               {/* VIEWPORT TOOLBAR */}
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#fff',border:'1px solid #dfe5ec',borderBottom:0,borderRadius:'12px 12px 0 0',padding:'8px 10px'}}>
                 <div style={{display:'flex',gap:2,background:'#eef2f6',padding:3,borderRadius:8}}>
-                  <button onClick={()=>setViewMode('material')} style={{border:0,borderRadius:6,padding:'7px 11px',background:viewMode==='material'?'#fff':'transparent',boxShadow:viewMode==='material'?'0 1px 3px rgba(15,23,42,.12)':'none',fontSize:11,fontWeight:800,color:'#23354d'}}>Material</button>
-                  <button onClick={()=>setViewMode('heat')} style={{border:0,borderRadius:6,padding:'7px 11px',background:viewMode==='heat'?'#fff':'transparent',boxShadow:viewMode==='heat'?'0 1px 3px rgba(15,23,42,.12)':'none',fontSize:11,fontWeight:800,color:'#23354d'}}>Thermal</button>
-                  <button style={{border:0,borderRadius:6,padding:'7px 11px',background:'transparent',fontSize:11,fontWeight:800,color:'#728096',cursor:'default'}}>Solar</button>
-                  <button style={{border:0,borderRadius:6,padding:'7px 11px',background:'transparent',fontSize:11,fontWeight:800,color:'#728096',cursor:'default'}}>Cutaway</button>
+                  {[
+                    ['material', 'Material'],
+                    ['heat', 'Thermal'],
+                    ['solar', 'Solar'],
+                  ].map(([mode, label]) => (
+                    <button
+                      key={mode}
+                      onClick={() => setViewMode(mode)}
+                      style={{
+                        border:0,
+                        borderRadius:6,
+                        padding:'7px 11px',
+                        background:viewMode===mode?'#fff':'transparent',
+                        boxShadow:viewMode===mode?'0 1px 3px rgba(15,23,42,.12)':'none',
+                        fontSize:11,
+                        fontWeight:800,
+                        color:'#23354d',
+                        cursor:'pointer',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setCutaway(current => current ? null : 'S')}
+                    style={{
+                      border:0,
+                      borderRadius:6,
+                      padding:'7px 11px',
+                      background:cutaway?'#fff':'transparent',
+                      boxShadow:cutaway?'0 1px 3px rgba(15,23,42,.12)':'none',
+                      fontSize:11,
+                      fontWeight:800,
+                      color:'#23354d',
+                      cursor:'pointer',
+                    }}
+                  >
+                    {cutaway ? `Cutaway ${cutaway}` : 'Cutaway'}
+                  </button>
                 </div>
                 <div style={{display:'flex',gap:3,background:'#eef2f6',padding:3,borderRadius:8}}>
-                  {['Iso','N','S','E','W','Plan'].map((v,i)=><button key={v} style={{border:0,borderRadius:6,padding:'7px 9px',background:i===0?'#fff':'transparent',boxShadow:i===0?'0 1px 3px rgba(15,23,42,.12)':'none',fontSize:10,fontWeight:800,color:'#33455d'}}>{v}</button>)}
+                  {['Iso','N','S','E','W','Plan'].map((v)=>
+                    <button
+                      key={v}
+                      onClick={()=>setCameraPreset(v)}
+                      style={{
+                        border:0,
+                        borderRadius:6,
+                        padding:'7px 9px',
+                        background:cameraPreset===v?'#fff':'transparent',
+                        boxShadow:cameraPreset===v?'0 1px 3px rgba(15,23,42,.12)':'none',
+                        fontSize:10,
+                        fontWeight:800,
+                        color:'#33455d',
+                        cursor:'pointer',
+                      }}
+                    >
+                      {v}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1618,18 +1751,62 @@ export default function DigitalTwinModule({
                   <ambientLight intensity={0.75}/>
                   <directionalLight position={[8,12,6]} intensity={1.3} castShadow/>
                   <hemisphereLight skyColor="#edf3f8" groundColor="#9aa5b5" intensity={0.35}/>
-                  <mesh position={[0,-0.06,0]}>
+                  <mesh position={[0,-0.06,0]} receiveShadow>
                     <boxGeometry args={[visualModel.length_m*1.5,0.1,visualModel.width_m*1.5]}/>
                     <meshStandardMaterial color="#a8b1bb" roughness={1}/>
                   </mesh>
-                  {wallGeometry.map((wall)=><Wall key={wall.cardinal} {...wall} viewMode={viewMode} height={visualModel.ceiling_height_m} cutaway={cutaway}/>) }
-                  <Roof length={visualModel.length_m} width={visualModel.width_m} height={visualModel.ceiling_height_m} slopeDeg={visualModel.roof?.slope_deg ?? roof.slope_deg} orientationDeg={visualModel.roof?.orientation_deg ?? roof.orientation_deg} color="#39465a"/>
+                  <CameraRig preset={cameraPreset} model={visualModel} controlsRef={controlsRef}/>
+                  {wallGeometry.map((wall) => (
+                    <Wall
+                      key={wall.cardinal}
+                      {...wall}
+                      viewMode={viewMode}
+                      height={visualModel.ceiling_height_m}
+                      cutaway={cutaway}
+                      materialColor={viewMode === 'solar'
+                        ? solarOrientationColor(
+                            wall.cardinal,
+                            visualModel.orientation_deg
+                          )
+                        : wall.materialColor}
+                    />
+                  ))}
+                  <Roof
+                    length={visualModel.length_m}
+                    width={visualModel.width_m}
+                    height={visualModel.ceiling_height_m}
+                    slopeDeg={visualModel.roof?.slope_deg ?? roof.slope_deg}
+                    orientationDeg={visualModel.roof?.orientation_deg ?? roof.orientation_deg}
+                    buildingOrientationDeg={visualModel.orientation_deg ?? orientationDeg}
+                    color={viewMode === 'solar' ? '#c9a45a' : '#39465a'}
+                  />
                   <Grid args={[30,30]} cellColor="#c3ceda" sectionColor="#9aaabd" fadeDistance={22} position={[0,0.002,0]}/>
-                  <OrbitControls enableDamping minDistance={3} maxDistance={20}/>
+                  <OrbitControls
+                    ref={controlsRef}
+                    enableDamping
+                    minDistance={3}
+                    maxDistance={Math.max(20, Math.max(visualModel.length_m, visualModel.width_m) * 4)}
+                  />
                 </Canvas>
 
                 {viewMode==='heat' && <HeatLegend/>}
-                <div style={{position:'absolute',top:12,left:12,padding:'6px 9px',borderRadius:7,background:'rgba(255,255,255,.9)',border:'1px solid #dce3eb',fontSize:10,fontWeight:850,letterSpacing:'.07em',color:'#34465e'}}>{viewMode==='heat'?'THERMAL FIELD':'MATERIAL VIEW'}</div>
+                {viewMode==='solar' && (
+                  <div style={{position:'absolute',left:18,bottom:18,padding:'10px 12px',borderRadius:10,background:'rgba(10,18,30,.86)',backdropFilter:'blur(10px)',color:'#fff',fontSize:11,boxShadow:'0 8px 24px rgba(0,0,0,.25)'}}>
+                    <div style={{fontWeight:700,marginBottom:6}}>SOLAR ORIENTATION</div>
+                    <div style={{opacity:.8}}>
+                      Simulated solar absorbed: {baselineResult?.solar_absorbed_kwh != null
+                        ? `${Number(baselineResult.solar_absorbed_kwh).toFixed(2)} kWh`
+                        : '—'}
+                    </div>
+                    <div style={{opacity:.62,marginTop:4,fontSize:10}}>
+                      Surface colors emphasize south-facing orientation.
+                    </div>
+                  </div>
+                )}
+                <div style={{position:'absolute',top:12,left:12,padding:'6px 9px',borderRadius:7,background:'rgba(255,255,255,.9)',border:'1px solid #dce3eb',fontSize:10,fontWeight:850,letterSpacing:'.07em',color:'#34465e'}}>
+                  {viewMode==='heat'?'THERMAL FIELD':viewMode==='solar'?'SOLAR ORIENTATION':'MATERIAL VIEW'}
+                  {cutaway ? ` · ${cutaway} WALL CUTAWAY` : ''}
+                </div>
                 <div style={{position:'absolute',top:12,right:12,display:'flex',gap:6}}>
                   <span style={{padding:'6px 8px',borderRadius:7,background:'rgba(255,255,255,.9)',border:'1px solid #dce3eb',fontSize:10,fontWeight:800,color:'#52657d'}}>↻ Orbit</span>
                   <span style={{padding:'6px 8px',borderRadius:7,background:'rgba(255,255,255,.9)',border:'1px solid #dce3eb',fontSize:10,fontWeight:800,color:'#52657d'}}>⌕ Zoom</span>
@@ -1649,39 +1826,112 @@ export default function DigitalTwinModule({
                 <div style={{fontSize:18,fontWeight:800,color:'#18283d',marginTop:4}}>S Wall</div>
               </div>
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',borderBottom:'1px solid #e8edf2'}}>
-                {['Properties','Envelope','Openings','Climate'].map((t,i)=><button key={t} style={{border:0,borderRight:i<3?'1px solid #edf0f4':'none',padding:'11px 4px',background:i===0?'#f4f8fc':'#fff',fontSize:9,fontWeight:850,color:i===0?'#1f568c':'#718097'}}>{t}</button>)}
+                {['Properties','Envelope','Openings','Climate'].map((t,i)=>(
+                  <button
+                    key={t}
+                    onClick={()=>setInspectorTab(t)}
+                    style={{
+                      border:0,
+                      borderRight:i<3?'1px solid #edf0f4':'none',
+                      padding:'11px 4px',
+                      background:inspectorTab===t?'#f4f8fc':'#fff',
+                      fontSize:9,
+                      fontWeight:850,
+                      color:inspectorTab===t?'#1f568c':'#718097',
+                      cursor:'pointer',
+                    }}
+                  >
+                    {t}
+                  </button>
+                ))}
               </div>
 
               {(() => {
                 const iw = walls.find(w=>w.cardinal==='S') || walls[0] || {};
                 const mat = materials.find(m=>m.id===iw.structural_material_id)?.name || iw.structural_material_id || 'Not specified';
                 const ins = materials.find(m=>m.id===iw.insulation_material_id)?.name || iw.insulation_material_id || 'Not specified';
-                const surface = (displayDesign?.surfaces || []).find(x=>String(x.name||'').toLowerCase().includes('s'));
+                const resolvedWallT = design?.resolved_thicknesses?.S_structural ?? iw.structural_thickness_m ?? 0;
+                const resolvedInsT = iw.insulation_material_id
+                  ? (design?.resolved_thicknesses?.S_insulation ?? iw.insulation_thickness_m ?? 0)
+                  : 0;
+                const surface = (displayDesign?.surfaces || []).find(x=>String(x.name||'').toLowerCase() === 'wall_s');
                 const openings = (visualModel?.walls || []).find(w=>w.cardinal==='S')?.openings || [];
-                return <>
-                  <div style={{padding:14}}>
-                    <div style={{padding:'8px 10px',border:'1px solid #dce4ed',borderRadius:8,fontSize:10,fontWeight:850,color:'#35526f',background:'#f8fafc',textTransform:'uppercase'}}>S Facade</div>
-                    <div style={{marginTop:10,display:'grid',gap:0}}>
-                      {[
-                        ['Structural material',mat],
-                        ['Structural thickness',`${Number(iw.thickness_m ?? 0).toFixed(2)} m`],
-                        ['Insulation',ins],
-                        ['Insulation thickness',`${Number(iw.insulation_thickness_m ?? 0).toFixed(2)} m`],
-                        ['Openings',`${openings.length} configured`],
-                        ['Area',surface?.area_m2!=null?`${Number(surface.area_m2).toFixed(1)} m²`:'—'],
-                        ['U-value',surface?.u_value_wm2k!=null?`${Number(surface.u_value_wm2k).toFixed(3)} W/m²K`:'—'],
-                        ['Heat loss',surface?.heat_loss_w!=null?`${Number(surface.heat_loss_w).toFixed(0)} W`:'—'],
-                      ].map(([k,v])=><div key={k} style={{display:'flex',justifyContent:'space-between',gap:12,padding:'10px 0',borderBottom:'1px solid #edf1f5',fontSize:11}}><span style={{color:'#718096'}}>{k}</span><strong style={{color:'#26374c',textAlign:'right',maxWidth:'58%'}}>{v}</strong></div>)}
+                const roofModel = visualModel?.roof || {};
+                if (inspectorTab === 'Envelope') {
+                  return (
+                    <div style={{padding:14}}>
+                      <div style={{padding:'8px 10px',border:'1px solid #dce4ed',borderRadius:8,fontSize:10,fontWeight:850,color:'#35526f',background:'#f8fafc',textTransform:'uppercase'}}>Envelope assembly</div>
+                      <div style={{marginTop:10}}>
+                        {[
+                          ['S wall structure', mat],
+                          ['S wall insulation', ins],
+                          ['Wall total thickness', `${(Number(resolvedWallT) + Number(resolvedInsT)).toFixed(2)} m`],
+                          ['Roof slope', `${Number(roofModel.slope_deg ?? 0).toFixed(0)}°`],
+                          ['Roof orientation', `${Number(roofModel.orientation_deg ?? 0).toFixed(0)}°`],
+                        ].map(([k,v])=><div key={k} style={{display:'flex',justifyContent:'space-between',gap:12,padding:'10px 0',borderBottom:'1px solid #edf1f5',fontSize:11}}><span style={{color:'#718096'}}>{k}</span><strong style={{color:'#26374c',textAlign:'right',maxWidth:'58%'}}>{v}</strong></div>)}
+                      </div>
                     </div>
-                  </div>
-                  <div style={{margin:'0 14px 14px',padding:12,border:'1px solid #e1e7ee',borderRadius:9,background:'#f8fafc'}}>
-                    <div style={{fontSize:10,fontWeight:850,color:'#52657b',textTransform:'uppercase',letterSpacing:'.06em'}}>Design performance</div>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:9}}>
-                      <div><div style={{fontSize:10,color:'#7a8798'}}>Min indoor</div><strong style={{fontSize:17,color:'#1f527f'}}>{(achievedTemp ?? 0).toFixed(1)}°C</strong></div>
-                      <div><div style={{fontSize:10,color:'#7a8798'}}>Target</div><strong style={{fontSize:17,color:'#26374c'}}>{(targetTemp ?? 18).toFixed(1)}°C</strong></div>
+                  );
+                }
+                if (inspectorTab === 'Openings') {
+                  return (
+                    <div style={{padding:14}}>
+                      <div style={{padding:'8px 10px',border:'1px solid #dce4ed',borderRadius:8,fontSize:10,fontWeight:850,color:'#35526f',background:'#f8fafc',textTransform:'uppercase'}}>S facade openings</div>
+                      {openings.length === 0 ? (
+                        <div style={{padding:'16px 0',fontSize:11,color:'#758194'}}>No openings configured on the S wall.</div>
+                      ) : (
+                        <div style={{marginTop:10,display:'grid',gap:7}}>
+                          {openings.map((o,index)=><div key={`${o.type}-${index}`} style={{padding:'9px 10px',border:'1px solid #e7ebf0',borderRadius:8,background:'#fbfcfd'}}>
+                            <div style={{fontSize:11,fontWeight:800,color:'#26374c',textTransform:'capitalize'}}>{o.type}</div>
+                            <div style={{fontSize:10,color:'#758194',marginTop:3}}>{Number(o.width_m).toFixed(2)} × {Number(o.height_m).toFixed(2)} m · offset {Number(o.offset_x_m).toFixed(2)} m</div>
+                          </div>)}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </>;
+                  );
+                }
+                if (inspectorTab === 'Climate') {
+                  return (
+                    <div style={{padding:14}}>
+                      <div style={{padding:'8px 10px',border:'1px solid #dce4ed',borderRadius:8,fontSize:10,fontWeight:850,color:'#35526f',background:'#f8fafc',textTransform:'uppercase'}}>Climate performance</div>
+                      <div style={{marginTop:10,display:'grid',gap:0}}>
+                        {[
+                          ['Min indoor', achievedTemp == null ? 'Preview' : `${achievedTemp.toFixed(1)} °C`],
+                          ['Target', targetTemp == null ? '18.0 °C' : `${targetTemp.toFixed(1)} °C`],
+                          ['Thermal status', thermalStatus],
+                          ['Surface heat loss', `${Math.round(totalHeatLoss)} W`],
+                          ['Solar absorbed', baselineResult?.solar_absorbed_kwh == null ? '—' : `${Number(baselineResult.solar_absorbed_kwh).toFixed(2)} kWh`],
+                        ].map(([k,v])=><div key={k} style={{display:'flex',justifyContent:'space-between',gap:12,padding:'10px 0',borderBottom:'1px solid #edf1f5',fontSize:11}}><span style={{color:'#718096'}}>{k}</span><strong style={{color:'#26374c',textAlign:'right',maxWidth:'58%'}}>{v}</strong></div>)}
+                      </div>
+                    </div>
+                  );
+                }
+                return (
+                  <>
+                    <div style={{padding:14}}>
+                      <div style={{padding:'8px 10px',border:'1px solid #dce4ed',borderRadius:8,fontSize:10,fontWeight:850,color:'#35526f',background:'#f8fafc',textTransform:'uppercase'}}>S Facade</div>
+                      <div style={{marginTop:10,display:'grid',gap:0}}>
+                        {[
+                          ['Structural material',mat],
+                          ['Structural thickness',`${Number(resolvedWallT).toFixed(2)} m`],
+                          ['Insulation',ins],
+                          ['Insulation thickness',`${Number(resolvedInsT).toFixed(2)} m`],
+                          ['Openings',`${openings.length} configured`],
+                          ['Area',surface?.area_m2!=null?`${Number(surface.area_m2).toFixed(1)} m²`:'—'],
+                          ['U-value',surface?.u_value_wm2k!=null?`${Number(surface.u_value_wm2k).toFixed(3)} W/m²K`:'—'],
+                          ['Heat loss',surface?.heat_loss_w!=null?`${Number(surface.heat_loss_w).toFixed(0)} W`:'—'],
+                        ].map(([k,v])=><div key={k} style={{display:'flex',justifyContent:'space-between',gap:12,padding:'10px 0',borderBottom:'1px solid #edf1f5',fontSize:11}}><span style={{color:'#718096'}}>{k}</span><strong style={{color:'#26374c',textAlign:'right',maxWidth:'58%'}}>{v}</strong></div>)}
+                      </div>
+                    </div>
+                    <div style={{margin:'0 14px 14px',padding:12,border:'1px solid #e1e7ee',borderRadius:9,background:'#f8fafc'}}>
+                      <div style={{fontSize:10,fontWeight:850,color:'#52657b',textTransform:'uppercase',letterSpacing:'.06em'}}>Design performance</div>
+                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:9}}>
+                        <div><div style={{fontSize:10,color:'#7a8798'}}>Min indoor</div><strong style={{fontSize:17,color:'#1f527f'}}>{(achievedTemp ?? 0).toFixed(1)}°C</strong></div>
+                        <div><div style={{fontSize:10,color:'#7a8798'}}>Target</div><strong style={{fontSize:17,color:'#26374c'}}>{(targetTemp ?? 18).toFixed(1)}°C</strong></div>
+                      </div>
+                    </div>
+                  </>
+                );
               })()}
             </div>
           </div>
