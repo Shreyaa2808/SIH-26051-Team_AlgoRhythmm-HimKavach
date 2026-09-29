@@ -35,6 +35,7 @@ export default function ProjectBar({
   return (
     <section className="dw-projectbar" aria-label="Design project">
       <div className="dw-project-main">
+        <div className="dw-project-icon" aria-hidden="true">⌂</div>
         <label className="dw-project-name">
           <span className="dw-eyebrow">Project</span>
           <input
@@ -51,6 +52,7 @@ export default function ProjectBar({
             }}
           />
         </label>
+        <span className="dw-project-context">ENGINEERING DESIGN</span>
         <span className={`dw-save dw-save-${status}`} title={savedAt ? `Last saved ${when(savedAt)}` : undefined} role="status">
           <i aria-hidden="true" />{STATUS[status]}
         </span>
