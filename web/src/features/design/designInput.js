@@ -233,6 +233,66 @@ export function deriveGeometry(geometry) {
   };
 }
 
+/* ------------------------------ envelope maths ----------------------------- */
+
+/** ASHRAE film resistances, same defaults as engine/solver/rc_network.py. */
+export const SURFACE_R = { outside: 0.04, inside: 0.13 };
+
+/** Whole-assembly U-value (W/m²K) from layers [{ k, thicknessM }]; null if any layer is unusable. */
+export function uValueOf(layers) {
+  if (!layers.length) return null;
+  let r = SURFACE_R.outside + SURFACE_R.inside;
+  for (const l of layers) {
+    if (!(Number(l.k) > 0)) return null;
+    r += Number(l.thicknessM || 0) / Number(l.k);
+  }
+  return 1 / r;
+}
+
+/** Per-m² figures for one layer. Cost/carbon are null when the data is missing (never 0). */
+export function layerMetrics(material, thicknessM) {
+  if (!material) return { rValue: null, costPerM2: null, carbonPerM2: null };
+  const t = Number(thicknessM) || 0;
+  return {
+    rValue: Number(material.k) > 0 ? t / Number(material.k) : null,
+    costPerM2: material.cost_per_m3_inr != null ? material.cost_per_m3_inr * t : null,
+    carbonPerM2:
+      material.carbon_kgco2e_per_kg != null && material.rho != null
+        ? material.carbon_kgco2e_per_kg * material.rho * t
+        : null,
+  };
+}
+
+/**
+ * The layers of wall | roof | floor as the user defined them: that component's
+ * structural layer + the shared insulation layer. `materialsById` comes from GET /materials.
+ */
+export function buildAssembly(envelope, key, materialsById) {
+  const eff = resolveEnvelope(envelope);
+  const toLayer = (part, label) => {
+    if (part.source === 'custom') {
+      const c = part.custom || {};
+      return { label, name: c.name || 'Custom material', k: Number(c.k) || null, rho: c.rho, cp: c.cp,
+        thicknessM: part.thicknessM, source: 'custom', material: { ...c, cost_per_m3_inr: c.costPerM3 ?? null, carbon_kgco2e_per_kg: null } };
+    }
+    const m = materialsById?.[part.materialId];
+    return { label, name: m?.name || part.materialId, k: m?.k ?? null, rho: m?.rho, cp: m?.cp,
+      thicknessM: part.thicknessM, source: part.source, material: m || null };
+  };
+  const layers = [toLayer(eff[key], key), toLayer(eff.insulation, 'insulation')];
+  const usable = layers.filter((l) => l.thicknessM > 0);
+  return { layers, uValue: uValueOf(usable.map((l) => ({ k: l.k, thicknessM: l.thicknessM }))) };
+}
+
+/** Rough, indicative rating for a cold-climate opaque assembly. */
+export function uValueBand(u) {
+  if (u == null) return { id: 'unknown', label: 'Unknown' };
+  if (u <= 0.25) return { id: 'very-good', label: 'Very good' };
+  if (u <= 0.45) return { id: 'good', label: 'Good' };
+  if (u <= 1.0) return { id: 'fair', label: 'Fair' };
+  return { id: 'poor', label: 'Poor' };
+}
+
 /** Compass bearing (deg) each pre-rotation wall label faces, given orientation. */
 export function wallBearings(orientationDeg) {
   const o = num(orientationDeg);

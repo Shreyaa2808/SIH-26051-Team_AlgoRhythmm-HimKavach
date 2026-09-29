@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import {
   createDefaultDesignInput, deriveGeometry, deriveOperations, validateDesignInput,
-  hydrateDesignInput, newId, wallBearings, southFacingWall, orientationLongSideSouth, occupiedHours,
+  hydrateDesignInput, newId, wallBearings, southFacingWall, orientationLongSideSouth, occupiedHours, uValueOf, buildAssembly, layerMetrics, uValueBand,
 } from '../designInput.js';
 import { toSimulatePayload } from '../toSimulatePayload.js';
 
@@ -73,4 +73,19 @@ assert.equal(orientationLongSideSouth({ lengthM: 3, widthM: 6 }), 90);
 assert.equal(occupiedHours(18, 8), 14);
 assert.equal(occupiedHours(0, 24), 24);
 
-console.log('Phase 0-2 checks passed');
+// Phase 3: envelope maths (0.3242393475911309 = value the real backend returns for the default build-up)
+const mats = {
+  local_stone_masonry: { id: 'local_stone_masonry', name: 'Stone', k: 2.2, rho: 2500, cost_per_m3_inr: 3000, carbon_kgco2e_per_kg: 0.08 },
+  expanded_polystyrene_eps: { id: 'expanded_polystyrene_eps', name: 'EPS', k: 0.036, rho: 20, cost_per_m3_inr: 4500, carbon_kgco2e_per_kg: 3.29 },
+};
+const asm = buildAssembly(createDefaultDesignInput().envelope, 'wall', mats);
+assert.ok(Math.abs(asm.uValue - 0.3242393475911309) < 1e-12);
+assert.equal(uValueBand(asm.uValue).id, 'good');
+assert.equal(layerMetrics(mats.expanded_polystyrene_eps, 0.1).costPerM2, 450);
+assert.equal(layerMetrics({ k: 1, rho: 1 }, 0.1).costPerM2, null); // missing data is null, not 0
+assert.equal(uValueOf([{ k: 0, thicknessM: 0.1 }]), null);
+const noIns = createDefaultDesignInput({ site: { siteId: 'leh' }, envelope: { insulation: { mode: 'select', materialId: 'mineral_wool', thicknessM: 0 } } });
+assert.equal(validateDesignInput(noIns).ready, true);
+assert.equal(toSimulatePayload(noIns).payload.insulation_thickness_m, 0.001);
+
+console.log('Phase 0-3 checks passed');

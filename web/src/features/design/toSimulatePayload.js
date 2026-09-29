@@ -40,6 +40,10 @@ export function toSimulatePayload(input) {
     insT = env.insulation.thicknessM || 0.1;
     notes.push(note('warn', 'envelope.insulation', 'Custom insulation is not supported by the solver yet; EPS was simulated instead.'));
   }
+  if (insT < 0.001) {
+    insT = 0.001;
+    notes.push(note('warn', 'envelope.insulation', 'The solver needs an insulation layer, so "no insulation" is modelled as a 1 mm layer (negligible effect).'));
+  }
   for (const key of ['wall', 'insulation']) {
     if (env[key].source === 'recommended-default')
       notes.push(note('info', `envelope.${key}`, `${key} uses HimKavach's baseline default until optimization picks one.`));

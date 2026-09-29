@@ -92,3 +92,16 @@
 .dw-hint { font-style: normal; font-size: 0.72rem; color: var(--text-dim); font-weight: 500; }
 .dw-derived { padding-top: 0.6rem; border-top: 1px solid rgba(150,170,210,0.3); }
 .dw-field input[type='range'] { padding: 0; accent-color: var(--accent); }
+
+.dw-segment { display: flex; flex-wrap: wrap; gap: 0.3rem; padding: 0.25rem; background: rgba(150,170,210,0.16); border-radius: 12px; }
+.dw-segment button { flex: 1 1 auto; padding: 0.5rem 0.8rem; border: none; border-radius: 9px; background: transparent; font-size: 0.82rem; font-weight: 600; color: var(--text-dim); cursor: pointer; }
+.dw-segment button.active { background: #fff; color: var(--accent); box-shadow: 0 2px 8px rgba(100,130,200,0.2); }
+.dw-btn-sm { padding: 0.35rem 0.75rem; font-size: 0.78rem; }
+.dw-facts-tight { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); padding-top: 0.6rem; border-top: 1px solid rgba(150,170,210,0.3); }
+.dw-u { display: flex; align-items: baseline; gap: 0.7rem; flex-wrap: wrap; padding: 0.6rem 0.9rem; border-radius: 10px; background: rgba(150,170,210,0.14); font-size: 0.85rem; }
+.dw-u span { color: var(--text-dim); font-weight: 600; }
+.dw-u strong { font-size: 1.05rem; }
+.dw-u em { font-style: normal; font-weight: 700; font-size: 0.75rem; padding: 0.15rem 0.55rem; border-radius: 999px; background: rgba(150,170,210,0.3); }
+.dw-u-very-good em, .dw-u-good em { background: rgba(23,166,114,0.18); color: #0e7a53; }
+.dw-u-fair em { background: rgba(240,170,40,0.22); color: #7a5410; }
+.dw-u-poor em { background: rgba(224,69,63,0.16); color: var(--error); }
