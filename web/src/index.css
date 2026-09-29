@@ -281,6 +281,7 @@ button[type="submit"]:disabled, .primary-btn:disabled { opacity: 0.5; cursor: no
 }
 .pareto-tag.cheapest { background: rgba(23,166,114,0.15); color: var(--success); }
 .pareto-tag.balanced-tag { background: var(--accent-soft); color: var(--accent); }
+.pareto-tag.waiting { background: rgba(245,158,11,0.15); color: #b45309; }
 .pareto-tag.max { background: rgba(224,69,63,0.12); color: var(--error); }
 .pareto-card h3 { margin: 0 0 0.6rem; font-size: 1.05rem; }
 .pareto-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.8rem 0; }

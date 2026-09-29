@@ -112,19 +112,19 @@ No request body. Returns:
 ```json
 {
   "runs": [{
-    "id": "...", "label": "...", "status": "complete | pending",
+    "id": "...", "label": "...", "status": "complete | awaiting_ansys | skipped_no_climate_data",
     "ours_min_indoor_temp_c": -13.2, "ansys_min_indoor_temp_c": -13.6,
-    "abs_error_c": 0.4, "ours_wall_clock_s": 0.8, "ansys_wall_clock_s": 240.0,
+    "abs_error_c": 0.4, "validated": true, "ours_wall_clock_s": 0.8, "ansys_wall_clock_s": 240.0,
     "speedup_x": 300.0, "note": "..."
   }],
-  "n_complete": 2, "n_pending": 1,
+  "n_complete": 2, "n_awaiting_ansys": 1, "tolerance_c": 1.0,
   "mae_c": 0.4, "mean_speedup_x": 300.0,
   "note": "Runs with status='pending' have no real ANSYS number on file yet..."
 }
 ```
 
-`abs_error_c` / `speedup_x` are `null` (not `0`) on `status: "pending"` runs —
-render those rows as "awaiting ANSYS run", not as a zero-error result.
+`abs_error_c` / `speedup_x` are `null` (not `0`) on `status: "awaiting_ansys"` runs (`ours_min_indoor_temp_c` is still populated) —
+render those rows as "Waiting for ANSYS", not as a zero-error result.
 `mae_c` / `mean_speedup_x` are computed over complete runs only.
 
 ## POST /simulate

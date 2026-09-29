@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const API_HOST = '127.0.0.1';
-const API_PORT = '8765';
+const API_PORT = 8765;
 let backend = null;
 
 function bundledDataDir() {
@@ -26,7 +26,15 @@ function seedWritableData() {
 }
 
 function backendExecutable() {
-  const exe = process.platform === 'win32' ? 'himkavach-api.exe' : 'himkavach-api';
+  const exe =
+    process.platform === 'win32'
+      ? 'himkavach-api.exe'
+      : 'himkavach-api';
+
+  if (!app.isPackaged) {
+    return path.join(__dirname, 'backend-dist', exe);
+  }
+
   return path.join(process.resourcesPath, 'backend', exe);
 }
 

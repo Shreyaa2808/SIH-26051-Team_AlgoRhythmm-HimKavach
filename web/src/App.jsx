@@ -3,6 +3,7 @@ import { API } from './api';
 import Sidebar from './components/Sidebar';
 import LocationPicker from './components/LocationPicker';
 import ConfigForm from './components/ConfigForm';
+import { NewDesignPage, isFeatureOn } from './features/design';
 import RetrofitForm from './components/RetrofitForm';
 import RetrofitResults from './components/RetrofitResults';
 import TemperatureChart from './components/TemperatureChart';
@@ -20,6 +21,7 @@ function App() {
 
   const [location, setLocation] = useState(null);
   const siteId = location?.site_id ?? null;
+  const useNewWizard = isFeatureOn('newDesignWizard');
 
   const [designDay, setDesignDay] = useState('coldest_winter_night');
   const [designMode, setDesignMode] = useState(null);
@@ -295,11 +297,22 @@ function App() {
                   ← Back
                 </button>
 
-                <ConfigForm
-                  defaultSiteId={siteId}
-                  designDay={designDay}
-                  onResult={handleNewSimResult}
-                />
+                {useNewWizard ? (
+                  <NewDesignPage
+                    location={location}
+                    designDay={designDay}
+                    onLocationChange={setLocation}
+                    onDesignDayChange={setDesignDay}
+                    onBaselineResult={handleNewSimResult}
+                    currentResult={simResult}
+                  />
+                ) : (
+                  <ConfigForm
+                    defaultSiteId={siteId}
+                    designDay={designDay}
+                    onResult={handleNewSimResult}
+                  />
+                )}
 
                 {simResult && (
                   <div className="results">
