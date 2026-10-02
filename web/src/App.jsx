@@ -9,7 +9,7 @@ import { exportOptimizeCSV, fetchInstantiate, fetchOptimize } from './project/ac
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import ProjectHome, { ProjectOverview } from './components/ProjectHome';
-import { ComingSoon, LoadingState, StepHeader } from './components/shared/Shared';
+import { ComingSoon, ErrorBanner, LoadingState, StepHeader } from './components/shared/Shared';
 
 import LocationPicker from './components/LocationPicker';
 import ConfigForm from './components/ConfigForm';
@@ -152,6 +152,7 @@ function Journey() {
         siteId: site,
         designDay,
         options: optimizeOptions,
+        baseline: project.baseline,
       });
 
       update(
@@ -315,7 +316,7 @@ function Journey() {
           />
         );
 
-      case 'site':
+            case 'site':
         return (
           <div>
             <StepHeader
@@ -323,11 +324,7 @@ function Journey() {
               title="Site"
               description="Choose where the shelter will be built."
               onBack={goBack('site')}
-              onNext={
-                project.site && designMode
-                  ? goNext('site')
-                  : undefined
-              }
+              onNext={project.site ? goNext('site') : undefined}
             />
 
             {!project.site ? (
@@ -341,116 +338,30 @@ function Journey() {
                   setDesignMode(null);
                 }}
               />
-            ) : designMode === null ? (
-              <>
-                <div className="results hk-site-card">
-                  <div>
-                    <h3 style={{ margin: 0 }}>
-                      {project.site.label}
-                    </h3>
-
-                    <p>
-                      Elevation:{' '}
-                      {project.site.elevation_m != null
-                        ? `${Number(
-                            project.site.elevation_m
-                          ).toFixed(0)} m`
-                        : '—'}
-                    </p>
-                  </div>
-
-                  <button
-                    className="back-btn"
-                    onClick={changeLocation}
-                  >
-                    Change location
-                  </button>
-                </div>
-
-                <div className="mode-select">
-                  <h2>
-                    Designing for {project.site.label}{' '}
-                    {project.site.elevation_m != null
-                      ? `(${Number(
-                          project.site.elevation_m
-                        ).toFixed(0)} m)`
-                      : ''}{' '}
-                    — what next?
-                  </h2>
-
-                  <button
-                    onClick={() => {
-                      update(
-                        { mode: 'new' },
-                        'New shelter selected'
-                      );
-
-                      setDesignMode('new');
-                      setStep('shelter');
-                    }}
-                  >
-                    Design New Shelter
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      update(
-                        { mode: 'retrofit' },
-                        'Retrofit selected'
-                      );
-
-                      setDesignMode('retrofit');
-                      setStep('shelter');
-                    }}
-                  >
-                    Retrofit Existing Shelter
-                  </button>
-                </div>
-              </>
             ) : (
-              <>
-                <div className="results hk-site-card">
-                  <div>
-                    <h3 style={{ margin: 0 }}>
-                      {project.site.label}
-                    </h3>
+              <div className="results hk-site-card">
+                <div>
+                  <h3 style={{ margin: 0 }}>
+                    {project.site.label}
+                  </h3>
 
-                    <p>
-                      Elevation:{' '}
-                      {project.site.elevation_m != null
-                        ? `${Number(
-                            project.site.elevation_m
-                          ).toFixed(0)} m`
-                        : '—'}
-                    </p>
-                  </div>
-
-                  <button
-                    className="back-btn"
-                    onClick={() => {
-                      setDesignMode(null);
-                      changeLocation();
-                    }}
-                  >
-                    ← Change location
-                  </button>
+                  <p>
+                    Elevation:{' '}
+                    {project.site.elevation_m != null
+                      ? `${Number(
+                          project.site.elevation_m
+                        ).toFixed(0)} m`
+                      : '—'}
+                  </p>
                 </div>
 
-                <div className="mode-select">
-                  <h2>
-                    {designMode === 'retrofit'
-                      ? 'Retrofit Existing Shelter'
-                      : 'Design New Shelter'}
-                  </h2>
-
-                  <button
-                    className="back-btn"
-                    onClick={() => setDesignMode(null)}
-                  >
-                    ← Change design mode
-                  </button>
-                </div>
-              </>
+                <button
+                  className="back-btn"
+                  onClick={changeLocation}
+                >
+                  Change location
+                </button>
+              </div>
             )}
           </div>
         );
@@ -584,10 +495,14 @@ function Journey() {
             <StepHeader
               stepId="optimize"
               title="Optimize"
-              description="Find designs that balance comfort, cost, weight and carbon."
+              description="Generate, verify and compare physics-verified shelter options across thermal comfort, material cost, envelope weight and carbon."
               onBack={goBack('optimize')}
-              onNext={project.selectedDesign ? goNext('optimize') : undefined}
-             nextLabel="Digital Twin →"
+              onNext={
+                project.optimizedDesigns.length && project.selectedDesign
+                  ? () => setStep('twin')
+                  : undefined
+              }
+              nextLabel="Digital Twin →"
             />
 
             {optimizing && (
@@ -607,8 +522,8 @@ function Journey() {
               onExportCSV={() =>
                 exportOptimizeCSV(project.optimizerRun)
               }
-              onExportPDF={() => window.print()}
               onUseInSandbox={handleUseInSandbox}
+              siteId={siteId}
               onOpenDesign={openDesign}
               instantiating={instantiating}
               instantiateError={instantiateError}

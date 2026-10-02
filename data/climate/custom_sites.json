@@ -114,16 +114,16 @@
   "custom_34p153_77p577": {
     "lat": 34.1526,
     "lon": 77.5771,
-    "elevation_m": 3500.0,
-    "label": "34.1526, 77.5771",
-    "resolved_at": 1790698951.3494518
+    "elevation_m": 3416.199951,
+    "label": "Khardung La Road, Chaktsal Gang, Leh, Leh district, Ladakh, 194101, India",
+    "resolved_at": 1790966270.025665
   },
   "custom_35p500_77p000": {
     "lat": 35.5,
     "lon": 77.0,
     "elevation_m": 4903.062012,
     "label": "Nubra, Ladakh, 194401, India",
-    "resolved_at": 1790685046.1246586
+    "resolved_at": 1790966511.1189644
   },
   "custom_34p630_75p365": {
     "lat": 34.63029822945902,
@@ -180,5 +180,19 @@
     "elevation_m": 4043.928955,
     "label": "\u6258\u6797\u9547 \u0f58\u0f50\u0f7c\u0f0b\u0f63\u0fa1\u0f72\u0f44\u0f0d, \u672d\u8fbe\u53bf \u0f62\u0fa9\u0f0b\u0f58\u0f51\u0f60\u0f0b\u0f62\u0fab\u0f7c\u0f44\u0f0b\u0f0d, \u963f\u91cc\u5730\u533a \u0f58\u0f44\u0f60\u0f0b\u0f62\u0f72\u0f66\u0f0b\u0f66\u0f0b\u0f41\u0f74\u0f63\u0f0b, \u897f\u85cf\u81ea\u6cbb\u533a \u0f56\u0f7c\u0f51\u0f0b\u0f62\u0f44\u0f0b\u0f66\u0f90\u0fb1\u0f7c\u0f44\u0f0b\u0f63\u0f97\u0f7c\u0f44\u0f66\u0f0d, \u4e2d\u56fd",
     "resolved_at": 1790693208.2607095
+  },
+  "custom_33p803_76p473": {
+    "lat": 33.802819,
+    "lon": 76.4730096,
+    "elevation_m": 4967.68457,
+    "label": "Kargil, Ladakh, India",
+    "resolved_at": 1790705680.3521228
+  },
+  "custom_34p144_77p623": {
+    "lat": 34.143663227899204,
+    "lon": 77.6233345114267,
+    "elevation_m": 3646.715576,
+    "label": "Mangnoz, Leh, Leh district, Ladakh, 194101, India",
+    "resolved_at": 1790707981.243784
   }
 }

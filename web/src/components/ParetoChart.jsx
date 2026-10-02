@@ -31,6 +31,7 @@ function niceTicks(lo, hi, n = 5) {
 
 export default function ParetoChart({ points, selected, onSelect }) {
   const [colorKey, setColorKey] = useState('weight_kg');
+  const [hovered, setHovered] = useState(null);
   const metric = COLOR_METRICS.find((m) => m.key === colorKey);
 
   const geo = useMemo(() => {
@@ -66,6 +67,31 @@ export default function ParetoChart({ points, selected, onSelect }) {
   };
 
   const fmt = (v) => v.toLocaleString('en-IN', { maximumFractionDigits: metric.digits });
+
+  // Point whose coordinates are shown: hovered one wins, else the selected one.
+  const active = hovered ?? selected ?? null;
+  const rupees = (v) => `₹${Math.round(v).toLocaleString('en-IN')}`;
+
+  const renderCallout = (p) => {
+    const cx = geo.x(p.cost_inr);
+    const cy = geo.y(p.comfort_coldest_hour_c);
+    const text = `${rupees(p.cost_inr)} · ${p.comfort_coldest_hour_c.toFixed(1)}°C`;
+    const boxW = text.length * 6.6 + 16;
+    const boxH = 24;
+    // keep the label inside the plot: flip left near right edge, below near top
+    let bx = cx + 14;
+    if (bx + boxW > W - 4) bx = cx - 14 - boxW;
+    let by = cy - boxH - 10;
+    if (by < 2) by = cy + 14;
+    return (
+      <g pointerEvents="none">
+        <rect x={bx} y={by} width={boxW} height={boxH} rx={6} fill="#1c2333" opacity="0.94" />
+        <text x={bx + boxW / 2} y={by + 16} textAnchor="middle" fontSize="12" fontWeight="600" fill="#fff">
+          {text}
+        </text>
+      </g>
+    );
+  };
 
   return (
     <div className="pareto-chart">
@@ -140,6 +166,10 @@ export default function ParetoChart({ points, selected, onSelect }) {
               aria-pressed={isSel}
               style={{ cursor: 'pointer', outline: 'none' }}
               onClick={() => onSelect(p)}
+              onMouseEnter={() => setHovered(p)}
+              onMouseLeave={() => setHovered(null)}
+              onFocus={() => setHovered(p)}
+              onBlur={() => setHovered(null)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
@@ -153,7 +183,44 @@ export default function ParetoChart({ points, selected, onSelect }) {
             </g>
           );
         })}
+
+        {active && renderCallout(active)}
       </svg>
+
+      <div
+        className="pareto-readout"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '6px 18px',
+          margin: '4px 0 8px',
+          padding: '8px 12px',
+          borderRadius: 8,
+          background: '#f4f7fd',
+          border: '1px solid #dde5f3',
+          fontSize: '0.8rem',
+          color: '#1c2333',
+        }}
+      >
+        {active ? (
+          <>
+            <span>
+              <strong>{active === selected ? 'Selected' : 'Hovering'}</strong>
+            </span>
+            <span>Cost (x): <strong>{rupees(active.cost_inr)}</strong></span>
+            <span>Coldest hour (y): <strong>{active.comfort_coldest_hour_c.toFixed(1)}°C</strong></span>
+            <span>Weight: <strong>{Math.round(active.weight_kg).toLocaleString('en-IN')} kg</strong></span>
+            <span>
+              Carbon:{' '}
+              <strong>
+                {active.carbon_kgco2e != null ? `${Math.round(active.carbon_kgco2e).toLocaleString('en-IN')} kgCO₂e` : '—'}
+              </strong>
+            </span>
+          </>
+        ) : (
+          <span style={{ color: '#5c6a85' }}>Click or hover a point to see its coordinates.</span>
+        )}
+      </div>
 
       <div
         style={{
