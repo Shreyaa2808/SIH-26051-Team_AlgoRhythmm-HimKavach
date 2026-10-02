@@ -55,13 +55,26 @@ class FixedParams:
     site_id: str
     day_of_year: int = 15
     sensible_heat_w: float = 200.0
-    # Phase E. Used when the corresponding gene is NOT free in the search:
-    roof_slope_deg: float = 0.0          # 0 = legacy behaviour (flat roof, solver treats as 5 deg)
-    # Snow (see engine/optimizer/snow.py). Ground load is a user input; the
-    # limit is optional — None means "report snow load, never reject on it".
+
+    # Phase E: roof geometry
+    roof_slope_deg: float = 0.0
+
+    # Snow
     ground_snow_load_kpa: float = 0.0
     max_roof_snow_load_kpa: float | None = None
 
+    # Baseline orientation / openings
+    orientation_deg: float = 0.0
+    window_wall: str | None = None
+    window_area_m2: float = 0.0
+    window_material_id: str = "double_glazed_low_e_window"
+
+    # Baseline air/ventilation configuration
+    co_generation_rate_lpm: float = 0.0
+    night_gate_enabled: bool = False
+    night_gate_close_hour: float = 19.0
+    night_gate_open_hour: float = 7.0
+    night_gate_closed_leakage_area_cm2: float = 60.0
 
 def slope_of(individual: dict, fixed: "FixedParams") -> float:
     return float(individual.get("roof_slope_deg", fixed.roof_slope_deg))
