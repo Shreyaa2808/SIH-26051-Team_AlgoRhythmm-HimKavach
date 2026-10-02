@@ -37,6 +37,7 @@ def genome_to_shelter_model(
     floor_area_m2: float,
     default_ceiling_height_m: float,
     default_roof_slope_deg: float = 0.0,
+    orientation_deg: float = 0.0,
     purpose: OccupancyPurpose = OccupancyPurpose.civilian_permanent,
     headcount: int = 4,
     name: str = "Optimized shelter",
@@ -56,7 +57,7 @@ def genome_to_shelter_model(
         length_m=side,
         width_m=side,
         ceiling_height_m=height,
-        orientation_deg=0.0,
+        orientation_deg=orientation_deg,
         occupancy=Occupancy(purpose=purpose, headcount=headcount),
         walls=[
             WallSpec(
